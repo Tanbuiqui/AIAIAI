@@ -23,6 +23,10 @@ VALID_INTENTS = {
 _client = None
 _MODEL = os.getenv("LLM_MODEL", "")
 
+# Qwen3 là model "thinking" -> phải tắt để content không rỗng (text dồn vào reasoning).
+# Cách hiệu quả (đã verify): chat_template_kwargs.enable_thinking = False.
+_THINK_OFF = {"chat_template_kwargs": {"enable_thinking": False}}
+
 
 def _get_client():
     """Khởi tạo OpenAI-compatible client nếu có cấu hình; lỗi/thiếu -> None."""
@@ -87,7 +91,8 @@ def route_intent(question: str) -> dict[str, Any]:
                 msgs.append({"role": "assistant", "content": json.dumps(a, ensure_ascii=False)})
             msgs.append({"role": "user", "content": question})
             resp = client.chat.completions.create(
-                model=_MODEL, messages=msgs, temperature=0, max_tokens=200,
+                model=_MODEL, messages=msgs, temperature=0, max_tokens=300,
+                extra_body=_THINK_OFF,
             )
             parsed = _extract_json(resp.choices[0].message.content)
             if parsed and parsed.get("intent") in VALID_INTENTS:
@@ -182,7 +187,7 @@ def interpret_freeform(question: str, digest: list[dict], meta: dict[str, Any]) 
                     f"Câu hỏi: {question}\n\nBảng số liệu đã tính (JSON — mọi con số CHÍNH XÁC):\n{payload}\n\n"
                     "Trả lời câu hỏi chỉ dựa trên bảng trên, bằng tiếng Việt."},
             ],
-            temperature=0.2, max_tokens=1000,
+            temperature=0.2, max_tokens=1000, extra_body=_THINK_OFF,
         )
         txt = (resp.choices[0].message.content or "").strip()
         return txt or None
@@ -205,7 +210,7 @@ def interpret(question: str, result: dict[str, Any], meta: dict[str, Any]) -> st
                         f"Câu hỏi: {question}\nDữ liệu đã tính (JSON):\n{payload}\n"
                         "Viết câu trả lời 4 phần bằng tiếng Việt."},
                 ],
-                temperature=0.3, max_tokens=900,
+                temperature=0.3, max_tokens=900, extra_body=_THINK_OFF,
             )
             txt = resp.choices[0].message.content
             if txt and txt.strip():
