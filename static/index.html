@@ -38,6 +38,8 @@
   .bot{align-self:flex-start;background:var(--panel);border:1px solid var(--line);
     border-bottom-left-radius:4px;width:100%}
   .bot strong{color:#fff}
+  .numup{color:var(--up);font-weight:600}
+  .numdown{color:var(--down);font-weight:600}
   .err{color:var(--down)}
 
   /* ---------- visual blocks ---------- */
@@ -563,7 +565,15 @@ function md(t){
     if(/^#{1,3}\s/.test(ln))html+='<h3>'+inline(esc(ln.replace(/^#+\s/,'')))+'</h3>';
     else if(ln.trim()==='')html+='<br>';else html+='<div>'+inline(esc(ln))+'</div>';
   }
-  flush();if(inUl)html+='</ul>';return html;
+  flush();if(inUl)html+='</ul>';return colorNums(html);
+}
+// tô màu số có dấu: +x xanh, -x/−x đỏ; tránh nhầm ngày (số đứng trước dấu)
+function colorNums(s){
+  return s.replace(/(^|[^\d\w<])([+\-−])(\d[\d.,]*\s?(?:%|tr|tỷ|triệu|đ)?)/g,
+    (m,pre,sign,rest)=>{
+      const neg=(sign==='-'||sign==='−');
+      return `${pre}<span class="${neg?'numdown':'numup'}">${sign}${rest}</span>`;
+    });
 }
 
 function renderAnswer(j){

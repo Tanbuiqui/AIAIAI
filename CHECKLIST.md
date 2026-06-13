@@ -41,6 +41,8 @@
 - [x] Fallback rule-based khi thiếu key MaaS → chạy/test local không cần MaaS
 - [x] **(mới) Freeform Q&A**: câu lạ/so sánh/lọc → đưa cả `digest` cho LLM tự trả lời, vẫn không bịa số
 - [x] **(mới) Router mở rộng**: thêm intent `uptrend`; bỏ từ khóa "top" gây nhầm growth/decline
+- [x] **(mới) Fix Qwen3 "thinking"**: `extra_body={chat_template_kwargs:{enable_thinking:false}}` cho cả 3 lượt gọi
+- [x] **ĐÃ TEST LIVE với Qwen MaaS thật** (`qwen/qwen3-5-27b`, `/health` báo `llm:true`): router hiểu NL, diễn giải 4 phần, freeform tổng hợp đúng số
 
 ### API + UI — `main.py`, `static/index.html` ✅
 - [x] `GET /health` → 200 (BẮT BUỘC cho AgentBase)
@@ -82,11 +84,11 @@
 
 ## ⬜ DEPLOY
 
+- [x] Lấy từ portal: IAM Client ID/Secret + MaaS API Key (đã nhận qua email) → `.env`
+- [x] Xác nhận model **Qwen** thực tế: `qwen/qwen3-5-27b` (Qwen 3.5 27B — ENABLED, loại CHAT)
 - [ ] Docker Desktop chạy nền
-- [ ] Lấy từ portal: IAM Client ID/Secret + MaaS API Key → `.env`
-- [ ] Xác nhận tên/path model **Qwen** thực tế trên portal
 - [ ] Clone `greennode-agentbase-skills` vào folder **CÙNG CẤP** với agent
-- [ ] Prompt deploy → điền Client ID/Secret + API Key + chọn Qwen + runtime `2×4`
+- [ ] Prompt deploy → điền Client ID/Secret + API Key + chọn Qwen 3.5 27B + runtime `2×4`
 - [ ] Đợi Docker build & push (~2–3 phút)
 - [ ] Kiểm tra status **ACTIVE** trên portal → lấy endpoint public
 - [ ] Test endpoint public: mở web view + gọi `POST /invocations`
@@ -129,8 +131,8 @@
 | Ngày | Việc | Trạng thái |
 |---|---|---|
 | 13–14/06 | Build v1: pipeline + main + UI + Docker; test local | ✅ XONG (13/06) |
-| 14–15/06 | Lấy key MaaS → `.env` → test LLM thật (router + freeform) | ⬜ |
-| 15/06 | Deploy lên AgentBase → ACTIVE → test endpoint public | ⬜ |
+| 13/06 | Lấy key MaaS → `.env` → test LLM thật (router + freeform) | ✅ XONG — Qwen `llm:true` |
+| 14–15/06 | Deploy lên AgentBase → ACTIVE → test endpoint public | ⬜ |
 | 16/06 | README (điền endpoint) + quay video demo; đệm sửa lỗi | ⬜ |
 | **17/06 12:00** | **SUBMIT (cứng)** | ⬜ |
 | 18/06 12:00 | Fail-fix (nếu cần) | ⬜ |

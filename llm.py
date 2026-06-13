@@ -157,7 +157,9 @@ Cấu trúc 4 phần:
 2. **Số liệu chi tiết** — dùng bảng markdown nếu là danh sách/xếp hạng.
 3. **Nguyên nhân** — gạch đầu dòng định lượng.
 4. **Đề xuất hành động** — cụ thể, làm được ngay.
-Mức churn: Cao 🔴, Trung bình 🟡, Thấp 🟢."""
+Mức churn: Cao 🔴, Trung bình 🟡, Thấp 🟢.
+QUAN TRỌNG: mọi số THAY ĐỔI tăng/giảm phải ghi rõ dấu +/− ngay trước số (tăng → "+1.8%", giảm → "−45%",
+chênh lệch → "+12 triệu" / "−5 triệu") để hệ thống tô màu xanh/đỏ. Số tuyệt đối (doanh thu, lợi nhuận) để nguyên."""
 
 
 _FREEFORM_SYSTEM = """Bạn là chuyên gia phân tích merchant, nói tiếng Việt, súc tích, giọng cố vấn.
@@ -169,6 +171,8 @@ gross_profit_now / gross_profit_last4w=lợi nhuận gộp tuần này / tổng 
 return_rate_pct=tỷ lệ khách quay lại; churn_risk=Cao/Trung bình/Thấp;
 weeks_declining_streak=số tuần giảm liên tiếp; weeks_increasing_streak=số tuần tăng liên tiếp.
 Trình bày: kết luận ngắn (số in đậm) → bảng/gạch đầu dòng số liệu → đề xuất hành động.
+QUAN TRỌNG: mọi số THAY ĐỔI tăng/giảm phải ghi rõ dấu +/− ngay trước số (tăng → "+1.8%", giảm → "−45%")
+để hệ thống tô màu xanh/đỏ. Số tuyệt đối (doanh thu, lợi nhuận) để nguyên không dấu.
 Nếu bảng không đủ dữ kiện để trả lời, nói rõ thay vì suy đoán."""
 
 
