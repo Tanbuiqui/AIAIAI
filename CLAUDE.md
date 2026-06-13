@@ -1,7 +1,7 @@
 # Claw-a-thon 2026 — Tài liệu Build & Deploy Agent
 
 > File context dùng cho Claude Code. Mục tiêu: build một AI agent và deploy thành công lên **GreenNode AgentBase** trước hạn nộp.
-> Người dùng build bằng **Claude Code (tài khoản Max cá nhân)**; agent runtime chạy bằng **model MaaS** do BTC cấp.
+> Người dùng build bằng **Claude Code (tài khoản cá nhân)**; agent runtime chạy bằng **model MaaS** do BTC cấp.
 
 ---
 
@@ -119,7 +119,7 @@ Hạ tầng (GPU, container, DevOps) đã được trừu tượng hóa. Giá tr
 
 | Nhóm | Công cụ | Dùng để |
 |---|---|---|
-| Vibe code | **Claude Code** (đang dùng — tài khoản Max) | Viết & build agent |
+| Vibe code | **Claude Code** (đang dùng — tài khoản cá nhân) | Viết & build agent |
 | AI Stack | GreenNode AI Portal | Quản lý account, API Key, IAM, AgentBase runtime, Open-claw |
 | Models (MaaS) | Gemma, Qwen, Minimax | Model chạy agent (đã cấp sẵn) |
 | Deploy | Bộ skill `vngcloud/greennode-agentbase-skills` | Đóng gói & deploy bằng prompt |
@@ -134,7 +134,7 @@ Hạ tầng (GPU, container, DevOps) đã được trừu tượng hóa. Giá tr
 - Push source code để nộp bài + để voting page hiển thị đúng.
 - ⚠️ Repo phải để **PUBLIC** từ lúc nộp đến hết voting 03/07.
 
-> **LƯU Ý CHO TÀI KHOẢN MAX:** KHÔNG set các biến `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` để trỏ Claude Code sang Minimax MaaS. Bạn đã có Max, cứ để Claude Code chạy bằng tài khoản riêng (Opus/Sonnet). Đoạn `export ... minimax ...` trong slide chỉ dành cho người KHÔNG có tài khoản Claude và muốn dùng credit cuộc thi để code — không áp dụng cho bạn. Kiểm tra bằng `/status`: base URL phải là của Anthropic, model không phải `minimax/...`.
+> **LƯU Ý CHO TÀI KHOẢN CÁ NHÂN:** KHÔNG set các biến `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` để trỏ Claude Code sang Minimax MaaS. Cứ để Claude Code chạy bằng tài khoản riêng. Đoạn `export ... minimax ...` trong slide chỉ dành cho người KHÔNG có tài khoản Claude và muốn dùng credit cuộc thi để code — không áp dụng cho bạn. Kiểm tra bằng `/status`: base URL phải là của Anthropic, model không phải `minimax/...`.
 
 ---
 
@@ -187,7 +187,7 @@ node_modules/
 - [ ] Video accessible bằng `@vng.com.vn` (YouTube unlisted hoặc OneDrive share internal).
 - [ ] GitHub repo để PUBLIC (từ lúc submit đến hết voting 03/07).
 - [ ] README không để trống (tối thiểu: tên agent, mô tả, cách chạy).
-- [ ] **Khai báo trong README:** "Agent phát triển với hỗ trợ của Claude Code (tài khoản Max cá nhân, chi phí do đội tự chi trả); agent runtime chạy bằng model MaaS." (theo FAQ rulebook — dùng model ngoài MaaS phải khai báo + tự chịu chi phí).
+- [ ] **Khai báo trong README:** "Agent phát triển với hỗ trợ của Claude Code (tài khoản cá nhân, chi phí do đội tự chi trả); agent runtime chạy bằng model MaaS." (theo FAQ rulebook — dùng model ngoài MaaS phải khai báo + tự chịu chi phí).
 
 ---
 
@@ -199,20 +199,20 @@ node_modules/
 
 ---
 
-## 9. CHECKLIST — Việc đầu tiên cần làm (cá nhân hóa cho Claude Code Max)
+## 9. CHECKLIST — Việc đầu tiên cần làm (cá nhân hóa cho Claude Code)
 
 ### A. Setup tài nguyên & môi trường
 - [ ] **Kiểm tra email BTC**: có đủ account portal + mật khẩu tạm, Client ID, Client Secret, API Key. Thiếu → báo BTC qua Teams ngay.
 - [ ] **Đăng nhập GreenNode AI Portal + đổi mật khẩu** (OTP về SĐT đã đăng ký).
 - [ ] **Rotate lại API Key + Client Secret** nếu chúng đã từng lộ ra ngoài; lưu giá trị mới vào `.env`.
-- [ ] **Kiểm tra Claude Code chạy đúng Max**: gõ `/status`, xác nhận base URL của Anthropic + model Opus/Sonnet (không phải minimax/vngcloud). Dọn biến `ANTHROPIC_*` cũ trong `.zshrc`/`.bashrc` nếu có.
+- [ ] **Kiểm tra Claude Code chạy đúng tài khoản cá nhân**: gõ `/status`, xác nhận base URL của Anthropic (không phải minimax/vngcloud). Dọn biến `ANTHROPIC_*` cũ trong `.zshrc`/`.bashrc` nếu có.
 - [ ] **Cài Docker Desktop** và mở cho chạy nền.
 - [ ] **Chuẩn bị GitHub** (account + Git CLI). Tạo repo mới, để PUBLIC, copy link.
 - [ ] **Clone bộ skill** `greennode-agentbase-skills` vào folder cùng cấp với agent.
 - [ ] **Đặt nhắc lịch cứng**: 17/06 12:00 Submit + mốc đệm riêng (vd 16/06 tối).
 - [ ] **Vào Group Teams** hỗ trợ (QR / link email).
-- [ ] **Ghi sẵn dòng khai báo README** (Claude Code Max + runtime MaaS).
-- [ ] (Khuyến nghị) Nhắn BTC xác nhận: dùng Claude Code Max để build có cần khai báo gì thêm không.
+- [ ] **Ghi sẵn dòng khai báo README** (Claude Code + runtime MaaS).
+- [ ] (Khuyến nghị) Nhắn BTC xác nhận: dùng Claude Code để build có cần khai báo gì thêm không.
 
 ### B. Build agent đầu tiên
 - [ ] Chốt **use case** + chọn **track**.

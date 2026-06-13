@@ -7,6 +7,16 @@
 
 ---
 
+## Mô tả / Description (song ngữ)
+
+**🇻🇳 Tiếng Việt**
+> **Merchant Growth Agent** — Trợ lý phân tích merchant cho Account Manager. Upload file giao dịch (CSV/Excel) rồi hỏi tự nhiên bằng tiếng Việt; agent tính toán bằng code (pandas) và dùng Qwen (MaaS) để diễn giải thành **số liệu + nguyên nhân + đề xuất hành động**. Tính năng: tổng quan danh mục, phát hiện merchant giảm, xếp hạng tăng trưởng, merchant tăng đều, cảnh báo churn 3 mức, ưu tiên "merchant đáng cứu" (churn × lợi nhuận), bóc tách nguyên nhân, biểu đồ xu hướng 8 tuần và hỏi-đáp tự do. Mọi con số tính bằng code — LLM chỉ diễn giải, không bịa số. Giúp AM giảm thời gian phân tích từ hàng giờ xuống vài giây và phát hiện sớm để giữ chân merchant.
+
+**🇬🇧 English**
+> **Merchant Growth Agent** — an analytics assistant for Account Managers. Upload a merchant transaction file (CSV/Excel) and ask questions in natural Vietnamese; the agent computes every metric in code (pandas) and uses Qwen (MaaS) to turn results into **numbers + root causes + recommended actions**. Features: portfolio overview, decline detection, growth ranking, steady-growth detection, 3-level churn alerts, "who's worth saving" prioritization (churn × profit), revenue decomposition, an 8-week trend chart, and free-form Q&A. All numbers are code-computed — the LLM only explains, never fabricates. It cuts analysis time from hours to seconds and surfaces at-risk merchants early so AMs can retain them.
+
+---
+
 ## Problem — Vấn đề
 Account Manager / Sales phải tự mở Excel, lọc và tính toán để biết merchant nào đang giảm, ai cần chăm sóc, ai sắp rời bỏ. Việc này tốn hàng giờ, dễ bỏ sót và thường phát hiện quá muộn để can thiệp.
 
@@ -91,7 +101,11 @@ docker run -p 8080:8080 --env-file .env merchant-growth-agent
 4. Đợi Docker build & push (~2–3 phút), kiểm tra status **ACTIVE** trên portal.
 5. Lấy public endpoint.
 
-**Endpoint:** `<điền-endpoint-sau-khi-deploy>`
+**Endpoint:** https://endpoint-268d6ef8-5926-4ea2-b504-88118a19b760.agentbase-runtime.aiplatform.vngcloud.vn
+
+- Web view: mở endpoint trên trình duyệt
+- API test: `POST {endpoint}/invocations` với `{"question": "...", "file_base64": "<csv base64>"}` (hoặc `csv_text`)
+- Health: `GET {endpoint}/health` → `{"status":"ok","llm":true}`
 
 ---
 
@@ -103,4 +117,4 @@ Kịch bản demo gợi ý: upload `merchant_performance_sample.csv` → "Mercha
 ---
 
 ## Ghi chú
-Agent được phát triển với sự hỗ trợ của **Claude Code (tài khoản Max cá nhân, chi phí do đội tự chi trả)**; agent **runtime chạy bằng model MaaS** do GreenNode cấp.
+Agent được phát triển với sự hỗ trợ của **Claude Code (tài khoản cá nhân, chi phí do đội tự chi trả)**; agent **runtime chạy bằng model MaaS** do GreenNode cấp.

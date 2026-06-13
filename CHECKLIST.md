@@ -76,7 +76,7 @@
 
 ## ⬜ TIÊU CHÍ PASS (BẮT BUỘC — đạt CẢ 3)
 
-- [ ] Agent **RUNNING** trên AgentBase (BTC gọi thử ≥1 request thành công)
+- [x] Agent **RUNNING** trên AgentBase (ACTIVE, /health 200, /invocations OK)
 - [ ] **Video demo 2–3 phút**, xem được bằng `@vng.com.vn`, đúng track Data Analysis
 - [ ] **README + mô tả ≤300 ký tự** đầy đủ problem/user/solution — không placeholder/lorem
 
@@ -84,14 +84,17 @@
 
 ## ⬜ DEPLOY
 
-- [x] Lấy từ portal: IAM Client ID/Secret + MaaS API Key (đã nhận qua email) → `.env`
+- [x] Lấy từ portal: IAM Client ID/Secret + MaaS API Key (đã nhận qua email) → `.env` + `.greennode.json`
 - [x] Xác nhận model **Qwen** thực tế: `qwen/qwen3-5-27b` (Qwen 3.5 27B — ENABLED, loại CHAT)
-- [ ] Docker Desktop chạy nền
-- [ ] Clone `greennode-agentbase-skills` vào folder **CÙNG CẤP** với agent
-- [ ] Prompt deploy → điền Client ID/Secret + API Key + chọn Qwen 3.5 27B + runtime `2×4`
-- [ ] Đợi Docker build & push (~2–3 phút)
-- [ ] Kiểm tra status **ACTIVE** trên portal → lấy endpoint public
-- [ ] Test endpoint public: mở web view + gọi `POST /invocations`
+- [x] Docker Desktop chạy nền (Docker 29.5.3)
+- [x] Clone `greennode-agentbase-skills` vào folder **CÙNG CẤP** với agent
+- [x] Build `linux/amd64` + push lên AgentBase Container Registry (`vcr.vngcloud.vn`)
+- [x] Tạo runtime `merchant-growth-agent`, flavor `runtime-s2-general-2x4`, PUBLIC, env-file `.env`
+- [x] Status **ACTIVE** → endpoint public lấy được
+- [x] Test endpoint: `/health` 200 (`llm:true`) + `/invocations` end-to-end OK + web view
+
+> **Endpoint:** https://endpoint-268d6ef8-5926-4ea2-b504-88118a19b760.agentbase-runtime.aiplatform.vngcloud.vn
+> **Runtime ID:** runtime-a60906f2-f84b-4764-941e-1148e7336dde
 
 ---
 
@@ -110,7 +113,7 @@
 - [ ] Agent đang RUNNING
 - [ ] Repo để **PUBLIC** (giữ đến hết voting 03/07)
 - [ ] Video accessible bằng `@vng.com.vn`
-- [ ] README có dòng **khai báo**: phát triển bằng Claude Code (Max cá nhân, đội tự chi trả); runtime chạy model MaaS
+- [ ] README có dòng **khai báo**: phát triển bằng Claude Code (cá nhân, đội tự chi trả); runtime chạy model MaaS
 - [ ] KHÔNG có credential trong repo (check `.env` đã ignore)
 - [ ] Nhắc lịch: 16/06 tối (đệm) + 17/06 12:00 (cứng)
 
@@ -132,7 +135,7 @@
 |---|---|---|
 | 13–14/06 | Build v1: pipeline + main + UI + Docker; test local | ✅ XONG (13/06) |
 | 13/06 | Lấy key MaaS → `.env` → test LLM thật (router + freeform) | ✅ XONG — Qwen `llm:true` |
-| 14–15/06 | Deploy lên AgentBase → ACTIVE → test endpoint public | ⬜ |
+| 13/06 | Deploy lên AgentBase → ACTIVE → test endpoint public | ✅ XONG — endpoint live |
 | 16/06 | README (điền endpoint) + quay video demo; đệm sửa lỗi | ⬜ |
 | **17/06 12:00** | **SUBMIT (cứng)** | ⬜ |
 | 18/06 12:00 | Fail-fix (nếu cần) | ⬜ |

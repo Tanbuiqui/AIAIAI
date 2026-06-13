@@ -212,7 +212,7 @@ Yêu cầu trình bày: số liệu in đậm; bảng xếp hạng gọn; badge 
 
 - **Model runtime:** Qwen (MaaS) — mạnh lý luận/phân tích, tiếng Việt tốt. Cấu hình lúc deploy qua bộ skill.
 - **Runtime size:** 2×4 (đủ cho file mẫu); cân nhắc 4×4 nếu mở rộng dữ liệu lớn.
-- **Build tool:** Claude Code (tài khoản Max cá nhân) — khai báo trong README theo FAQ rulebook.
+- **Build tool:** Claude Code (tài khoản cá nhân) — khai báo trong README theo FAQ rulebook.
 
 ---
 
@@ -229,7 +229,7 @@ Yêu cầu trình bày: số liệu in đậm; bảng xếp hạng gọn; badge 
 - [ ] Số liệu agent trả về **khớp với tính toán code** (không bịa).
 - [ ] Agent **RUNNING** trên AgentBase, BTC gọi được ≥1 request.
 - [ ] Giao diện web mở được qua endpoint public.
-- [ ] README đầy đủ (tên agent, mô tả, cách chạy, khai báo Claude Code Max + Qwen MaaS).
+- [ ] README đầy đủ (tên agent, mô tả, cách chạy, khai báo Claude Code + Qwen MaaS).
 - [ ] Repo PUBLIC; video demo 2–3 phút.
 
 ---
