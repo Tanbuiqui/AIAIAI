@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merchant Growth Agent</title>
+<style>
+  :root{
+    --bg:#0f1729; --panel:#16213e; --panel2:#1c2a4a; --line:#26345c;
+    --txt:#e7ecf6; --muted:#93a0c0; --accent:#5b8cff; --accent2:#7c5cff;
+    --user:#274472; --up:#2ecc71; --warn:#f1c40f; --down:#ff5c5c; --teal:#22d3ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:linear-gradient(160deg,#0b1120,#11193a);color:var(--txt);
+    height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;
+    background:rgba(22,33,62,.7);border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+  .logo{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));font-size:20px}
+  h1{font-size:17px;margin:0;font-weight:650}
+  .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .status{margin-left:auto;font-size:12.5px;color:var(--muted);text-align:right;line-height:1.5}
+  .status b{color:var(--accent)}
+  .uploadBtn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+    border:none;padding:9px 16px;border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .uploadBtn:hover{filter:brightness(1.08)}
+
+  main{flex:1;display:flex;flex-direction:column;max-width:940px;width:100%;
+    margin:0 auto;padding:0 18px;overflow:hidden}
+  #chat{flex:1;overflow-y:auto;padding:20px 4px;display:flex;flex-direction:column;gap:16px}
+  #chat::-webkit-scrollbar{width:8px}#chat::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+
+  .msg{max-width:92%;padding:13px 16px;border-radius:14px;line-height:1.55;font-size:14.5px;
+    animation:rise .25s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .me{align-self:flex-end;background:var(--user);border-bottom-right-radius:4px;max-width:80%}
+  .bot{align-self:flex-start;background:var(--panel);border:1px solid var(--line);
+    border-bottom-left-radius:4px;width:100%}
+  .bot strong{color:#fff}
+  .err{color:var(--down)}
+
+  /* ---------- visual blocks ---------- */
+  .vtitle{font-size:14px;font-weight:650;margin:2px 0 12px;color:#fff;line-height:1.4}
+  .vtitle .hl{color:var(--accent)}
+
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+  .tile{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .tile .lab{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .tile .val{font-size:19px;font-weight:700;margin-top:3px}
+  .tile .val.up{color:var(--up)} .tile .val.down{color:var(--down)}
+
+  .pills{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .pill{flex:1;min-width:120px;text-align:center;border-radius:10px;padding:9px;font-size:13px;
+    border:1px solid var(--line);cursor:pointer;transition:.15s}
+  .pill:hover{filter:brightness(1.15);border-color:var(--accent)}
+  .pill .hintx{display:block;font-size:10px;color:var(--muted);margin-top:2px;font-weight:400}
+  .pill b{display:block;font-size:20px;margin-bottom:1px}
+  .pill.up{background:rgba(46,204,113,.12);color:var(--up)}
+  .pill.down{background:rgba(255,92,92,.12);color:var(--down)}
+  .pill.warn{background:rgba(241,196,15,.12);color:var(--warn)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .colh{font-size:12.5px;color:var(--muted);margin:4px 0 8px;font-weight:600}
+
+  /* ranked bar row */
+  .rrow{display:grid;grid-template-columns:18px 1fr;gap:9px;align-items:center;padding:6px 0;
+    border-bottom:1px solid rgba(38,52,92,.5)}
+  .rrow:last-child{border-bottom:none}
+  .rnum{color:var(--muted);font-size:12px;text-align:center}
+  .rname{font-size:13.5px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .rname .nm{font-weight:600}
+  .rsub{font-size:11.5px;color:var(--muted)}
+  .rval{font-weight:700;white-space:nowrap}
+  .rval.up{color:var(--up)} .rval.down{color:var(--down)}
+
+  .bar{position:relative;height:7px;background:var(--panel2);border-radius:6px;margin-top:5px;
+    overflow:hidden}
+  .bfill{position:absolute;top:0;bottom:0;border-radius:6px}
+  /* before/after delta bar */
+  .dbar{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+  .drowb{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--muted)}
+  .drowb .cap{width:30px;flex-shrink:0;text-align:right}
+  .dseg{height:7px;border-radius:6px;min-width:2px}
+  .dseg.prev{background:#46568a}
+  .dseg.up{background:linear-gradient(90deg,#1e9e58,var(--up))}
+  .dseg.down{background:linear-gradient(90deg,var(--down),#c0392b)}
+  .arrow{font-size:12.5px;color:var(--muted)}
+  .rsub .now{color:var(--txt);font-weight:600}
+  .bfill.up{background:linear-gradient(90deg,#1e9e58,var(--up))}
+  .bfill.down{background:linear-gradient(90deg,var(--down),#c0392b)}
+  /* single-direction meter (0..100) */
+  .meter{position:relative;height:7px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:5px}
+  .meter .mf{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+
+  /* cards */
+  .cardgrid{display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+    border-left:4px solid var(--line)}
+  .card.lv-cao{border-left-color:var(--down)}
+  .card.lv-tb{border-left-color:var(--warn)}
+  .card.lv-thap{border-left-color:var(--up)}
+  .chead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .cname{font-size:14.5px;font-weight:650}
+  .tag{font-size:11px;background:#223158;color:var(--muted);padding:2px 8px;border-radius:20px;margin-left:6px}
+  .badge{font-size:11.5px;padding:2px 9px;border-radius:20px;font-weight:600}
+  .badge.cao{background:rgba(255,92,92,.18);color:var(--down)}
+  .badge.tb{background:rgba(241,196,15,.18);color:var(--warn)}
+  .badge.thap{background:rgba(46,204,113,.18);color:var(--up)}
+  .cstats{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 4px;font-size:12.5px;color:var(--muted)}
+  .cstats b{color:var(--txt)}
+  .reason{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .rec{font-size:12.5px;margin-top:8px;padding:7px 10px;border-radius:8px;
+    background:rgba(91,140,255,.1);border:1px solid rgba(91,140,255,.25)}
+  .rec.thin{background:rgba(241,196,15,.1);border-color:rgba(241,196,15,.3)}
+
+  /* decompose */
+  .decohead{font-size:24px;font-weight:800;margin:2px 0 12px}
+  .deco{display:flex;flex-direction:column;gap:11px;margin-bottom:8px}
+  .drow .dlab{display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px}
+  .drow .dlab .nm{color:var(--txt)} .drow .dlab .vv{font-weight:700}
+  .actions{margin:6px 0 0;padding-left:18px;font-size:13px}.actions li{margin:4px 0}
+
+  /* line chart + bộ lọc */
+  .lcbar{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .lcsearch{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    padding:7px 11px;border-radius:8px;font-size:13px;outline:none}
+  .lcsearch:focus{border-color:var(--accent)}
+  .lcbtn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:6px 11px;
+    border-radius:8px;font-size:12px;cursor:pointer}
+  .lcbtn:hover{border-color:var(--accent)}
+  .lcbtn.on{border-color:var(--accent);color:var(--accent);background:#22325c}
+  .lccount{font-size:12px;color:var(--muted)}
+  .lccats{display:flex;flex-wrap:wrap;gap:5px 12px;margin-bottom:8px;font-size:11.5px;color:var(--muted)}
+  .lccats span{display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
+  .lccats span.off{opacity:.4;text-decoration:line-through}
+  .lccats i{width:11px;height:3px;border-radius:2px;display:inline-block}
+  .lclist{max-height:148px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));
+    gap:1px 10px;margin-bottom:10px;padding:6px;background:rgba(0,0,0,.14);border:1px solid var(--line);border-radius:8px}
+  .lclist::-webkit-scrollbar{width:7px}.lclist::-webkit-scrollbar-thumb{background:var(--line);border-radius:7px}
+  .lcitem{display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;padding:3px 5px;border-radius:6px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lcitem:hover{background:rgba(255,255,255,.04)}
+  .lcitem .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .lcchart{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:rgba(0,0,0,.12)}
+  .lcchart svg{display:block;touch-action:none}
+  .lcchart polyline{fill:none;stroke-width:1.5;opacity:.5;transition:opacity .12s,stroke-width .12s;cursor:pointer}
+  .lcchart polyline:hover{opacity:1;stroke-width:3.2}
+  .lchint{font-size:11px;color:var(--muted);margin:6px 2px 0}
+
+  details.prose{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+  details.prose summary{cursor:pointer;color:var(--accent);font-size:12.5px;list-style:none}
+  details.prose summary::-webkit-details-marker{display:none}
+  details.prose .pbody{margin-top:8px;font-size:13.5px;color:#cdd6ea}
+  details.prose table{border-collapse:collapse;margin:8px 0;width:100%;font-size:12.5px}
+  details.prose th,details.prose td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+  details.prose th{background:var(--panel2)}
+  details.prose ul{padding-left:18px}
+
+  .drop{align-self:center;text-align:center;border:2px dashed var(--line);border-radius:16px;
+    padding:34px 30px;margin:auto 0;color:var(--muted);max-width:520px;transition:.2s}
+  .drop.hot{border-color:var(--accent);background:rgba(91,140,255,.07);color:var(--txt)}
+  .drop .big{font-size:34px;margin-bottom:10px}.drop b{color:var(--txt)}
+  .drop code{background:var(--panel2);padding:1px 5px;border-radius:5px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;padding:10px 4px}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    padding:7px 13px;border-radius:20px;font-size:13px;cursor:pointer;transition:.15s}
+  .chip:hover{border-color:var(--accent);background:#22325c}
+  .chip:disabled{opacity:.4;cursor:not-allowed}
+
+  .composer{display:flex;gap:10px;padding:12px 4px 18px}
+  #q{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--txt);
+    padding:13px 15px;border-radius:12px;font-size:14.5px;outline:none}
+  #q:focus{border-color:var(--accent)}
+  #send{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;
+    width:48px;border-radius:12px;font-size:18px;cursor:pointer}
+  #send:disabled{opacity:.5;cursor:not-allowed}
+  .dots span{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;
+    background:var(--muted);animation:blink 1s infinite}
+  .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%{opacity:.3}40%{opacity:1}}
+
+  @media(max-width:640px){.kpis{grid-template-columns:1fr}.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">📊</div>
+  <div>
+    <h1>Merchant Growth Agent</h1>
+    <div class="sub">Trợ lý phân tích merchant cho Account Manager</div>
+  </div>
+  <div class="status" id="status">Chưa nạp dữ liệu</div>
+  <button class="uploadBtn" onclick="fileInput.click()">⬆ Upload CSV/Excel</button>
+  <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" hidden>
+</header>
+
+<main>
+  <div id="chat">
+    <div class="drop" id="drop">
+      <div class="big">📥</div>
+      <b>Kéo-thả file CSV/Excel vào đây</b><br>
+      hoặc bấm <b>Upload</b> ở góc trên.<br>
+      <span style="font-size:12.5px">Dùng <code>merchant_performance_sample.csv</code> để demo.</span>
+    </div>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="composer">
+    <input id="q" placeholder="Hỏi bằng tiếng Việt… (vd: Merchant nào giảm tuần này?)" disabled>
+    <button id="send" disabled>➤</button>
+  </div>
+</main>
+
+<script>
+const SUGGESTIONS = [
+  "Tổng quan tuần này","Merchant nào giảm tuần này?","Top 10 tăng trưởng",
+  "Ai sắp churn?","Ai quan trọng đang lung lay?","Nên chạy voucher cho ai?",
+  "Ai tăng đều mỗi tuần?"
+];
+let sessionId = null;
+const chat=document.getElementById('chat'), drop=document.getElementById('drop'),
+  statusEl=document.getElementById('status'), fileInput=document.getElementById('fileInput'),
+  q=document.getElementById('q'), send=document.getElementById('send'),
+  chipsBox=document.getElementById('chips');
+
+function renderChips(){
+  chipsBox.innerHTML='';
+  SUGGESTIONS.forEach(s=>{const b=document.createElement('button');
+    b.className='chip';b.textContent=s;b.disabled=!sessionId;
+    b.onclick=()=>{q.value=s;ask();};chipsBox.appendChild(b);});
+}
+renderChips();
+
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const sgn=v=>(v>=0?'+':'')+v+'%';
+const cls=v=>v>=0?'up':'down';
+const lvKey=l=>l==='Cao'?'cao':(l==='Trung bình'?'tb':'thap');
+const lvBadge=l=>`<span class="badge ${lvKey(l)}">${l==='Cao'?'🔴':l==='Trung bình'?'🟡':'🟢'} ${esc(l)}</span>`;
+
+// diverging WoW bar (center = 0) — dùng khi dấu lẫn lộn (bóc tách)
+function wowBar(v,maxAbs){
+  const p=maxAbs?Math.min(50,Math.abs(v)/maxAbs*50):0;
+  const side=v>=0?`left:50%;width:${p}%`:`right:50%;width:${p}%`;
+  return `<div class="bar"><div class="bfill ${cls(v)}" style="${side}"></div></div>`;
+}
+// left-anchored bar — dùng cho bảng xếp hạng/top mover (1 dấu)
+function barL(v,maxAbs){
+  const p=maxAbs?Math.min(100,Math.abs(v)/maxAbs*100):0;
+  return `<div class="bar"><div class="bfill ${cls(v)}" style="left:0;width:${p}%"></div></div>`;
+}
+// thanh so sánh trước→sau: xám = tuần trước, màu = tuần này (chuẩn hóa theo max của 2)
+function deltaBar(prev,now){
+  const mx=Math.max(prev,now,1);
+  const up=now>=prev;
+  return `<div class="dbar">
+    <div class="drowb"><span class="cap">trước</span><div class="dseg prev" style="width:${prev/mx*100}%"></div></div>
+    <div class="drowb"><span class="cap">nay</span><div class="dseg ${up?'up':'down'}" style="width:${now/mx*100}%"></div></div>
+  </div>`;
+}
+// dòng "X đ → Y đ"
+const fromTo=m=>`${esc(m.revenue_prev_fmt)} <span class="arrow">→</span> <span class="now">${esc(m.revenue_fmt)}</span>`;
+
+// rút gọn tiền: 162.5tr / 1.6 tỷ
+function fmtShort(x){
+  x=Math.round(x);
+  if(x>=1e9)return (x/1e9).toFixed(1).replace(/\.0$/,'').replace('.',',')+' tỷ';
+  if(x>=1e6)return Math.round(x/1e6)+' tr';
+  if(x>=1e3)return Math.round(x/1e3)+'k';
+  return x;
+}
+function niceMax(v){if(v<=0)return 1;const e=Math.floor(Math.log10(v)),b=Math.pow(10,e),f=v/b;
+  const nf=f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10;return nf*b;}
+
+// biểu đồ 2 cột: tuần trước (xám) + tuần này (xanh/đỏ), ghi rõ số tiền trên đầu cột + %WoW
+function columnChart(items){
+  const n=items.length; if(!n)return'';
+  const gw=Math.max(66,Math.min(120,680/n));
+  const bw=Math.max(16,Math.min(32,(gw-18)/2-3)), gap=6;
+  const L=46,R=12,T=48,B=n>5?56:30,PH=160;
+  const W=L+n*gw+R, H=T+PH+B;
+  const mx=niceMax(Math.max(...items.map(m=>Math.max(m.revenue_prev,m.revenue)),1));
+  const yOf=v=>T+PH-(v/mx)*PH;
+  let s='';
+  for(let k=0;k<=4;k++){const val=mx*k/4,yy=yOf(val);
+    s+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#26345c" stroke-width="1"/>`;
+    s+=`<text x="${L-6}" y="${yy+3}" text-anchor="end" font-size="9.5" fill="#93a0c0">${fmtShort(val)}</text>`;}
+  items.forEach((m,i)=>{
+    const gx=L+i*gw, pairL=gx+(gw-(2*bw+gap))/2, cx=gx+gw/2;
+    const up=m.revenue>=m.revenue_prev, nowCol=up?'#2ecc71':'#ff5c5c';
+    const ph=(m.revenue_prev/mx)*PH, nh=(m.revenue/mx)*PH;
+    const px=pairL+bw/2, nx=pairL+bw+gap+bw/2, pyTop=T+PH-ph, nyTop=T+PH-nh;
+    // cột tuần trước
+    s+=`<rect x="${pairL}" y="${pyTop}" width="${bw}" height="${ph}" rx="3" fill="#46568a"><title>${esc(m.name)} — tuần trước: ${esc(m.revenue_prev_fmt)}</title></rect>`;
+    s+=`<text x="${px}" y="${pyTop-4}" text-anchor="middle" font-size="9" fill="#aab4d0">${fmtShort(m.revenue_prev)}</text>`;
+    // cột tuần này
+    s+=`<rect x="${pairL+bw+gap}" y="${nyTop}" width="${bw}" height="${nh}" rx="3" fill="${nowCol}"><title>${esc(m.name)} — tuần này: ${esc(m.revenue_fmt)} (${sgn(m.wow_pct)})</title></rect>`;
+    s+=`<text x="${nx}" y="${nyTop-15}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${nowCol}">${sgn(m.wow_pct)}</text>`;
+    s+=`<text x="${nx}" y="${nyTop-4}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#e7ecf6">${fmtShort(m.revenue)}</text>`;
+    const lab=m.name.length>12?m.name.slice(0,11)+'…':m.name;
+    if(n>5)s+=`<text x="${cx}" y="${T+PH+13}" text-anchor="end" font-size="9.5" fill="#cdd6ea" transform="rotate(-32 ${cx} ${T+PH+13})">${esc(lab)}</text>`;
+    else s+=`<text x="${cx}" y="${T+PH+15}" text-anchor="middle" font-size="10" fill="#cdd6ea">${esc(lab)}</text>`;
+  });
+  // chú thích
+  let lx=L;
+  const lg=[['#46568a','Tuần trước'],['#2ecc71','Tăng'],['#ff5c5c','Giảm']];
+  lg.forEach(([c,t])=>{s+=`<rect x="${lx}" y="14" width="11" height="11" rx="2" fill="${c}"/>`
+    +`<text x="${lx+15}" y="23" font-size="10" fill="#93a0c0">${t}</text>`;lx+=t.length*6.4+36;});
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:280px" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+function meter(v,thin){ // 0..100 single bar
+  const p=Math.max(0,Math.min(100,v));
+  const col=thin?'var(--warn)':'var(--teal)';
+  return `<div class="meter"><div class="mf" style="width:${p}%;background:${col}"></div></div>`;
+}
+function rankList(items,valFn,extraFn){
+  return `<div class="cardgrid">`+items.map((m,i)=>{
+    const v=valFn(m);
+    const extra=extraFn?`<div class="rsub" style="margin-top:4px">${extraFn(m)}</div>`:'';
+    return `<div class="rrow"><div class="rnum">${i+1}</div><div>
+      <div class="rname"><span class="nm">${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
+        <span class="rval ${cls(v)}">${sgn(v)}</span></div>
+      <div class="rsub">${fromTo(m)}</div>${deltaBar(m.revenue_prev,m.revenue)}${extra}</div></div>`;
+  }).join('')+`</div>`;
+}
+
+// màu theo ngành hàng
+const CAT_COLORS={'F&B':'#5b8cff','Thời trang':'#ff7ab6','Điện tử':'#f1c40f','Tạp hóa':'#2ecc71',
+  'Sách':'#22d3ee','Làm đẹp':'#c084fc','Khác':'#9aa6c4'};
+const catColor=c=>CAT_COLORS[c]||'#9aa6c4';
+const ddmm=iso=>{const p=iso.split('-');return p[2]+'/'+p[1];};
+
+// vẽ SVG line chart cho danh sách merchant đã chọn; ít merchant -> hiện điểm + số tiền
+function lineSVG(wk, ms){
+  const n=wk.length;
+  if(!ms.length)return `<div style="padding:30px;text-align:center;color:var(--muted)">Chưa chọn merchant nào — tick ở danh sách phía trên.</div>`;
+  const showPts=ms.length<=12, showLab=ms.length<=8, nameLeft=showLab;
+  const L=nameLeft?130:50, R=16,T=14,B=38,PH=215,plotW=Math.max(420,(n-1)*70);
+  const W=L+plotW+R,H=T+PH+B;
+  const mx=niceMax(Math.max(...ms.flatMap(m=>m.revenue),1));
+  const xOf=i=>L+i*(plotW/(n-1)), yOf=v=>T+PH-(v/mx)*PH;
+  let s='';
+  // lưới ngang; khi để tên bên trái thì bỏ nhãn tiền
+  for(let k=0;k<=4;k++){const val=mx*k/4,yy=yOf(val);
+    s+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#26345c" stroke-width="1"/>`;
+    if(!nameLeft)s+=`<text x="${L-6}" y="${yy+3}" text-anchor="end" font-size="9.5" fill="#93a0c0">${fmtShort(val)}</text>`;}
+  wk.forEach((w,i)=>{s+=`<text x="${xOf(i)}" y="${T+PH+15}" text-anchor="middle" font-size="9.5" fill="#cdd6ea">${ddmm(w)}</text>`;});
+  // tránh nhãn tên chồng nhau: dồn vị trí y tối thiểu cách 11px
+  const placed=[];
+  const placeY=y=>{let yy=y;while(placed.some(p=>Math.abs(p-yy)<11))yy-=11;placed.push(yy);return yy;};
+  ms.forEach(m=>{
+    const col=catColor(m.category);
+    const pts=m.revenue.map((v,i)=>`${xOf(i)},${yOf(v)}`).join(' ');
+    s+=`<polyline points="${pts}" stroke="${col}"><title>${esc(m.name)} (${esc(m.category)})\n${m.revenue.map((v,i)=>ddmm(wk[i])+': '+fmtShort(v)).join('  ')}</title></polyline>`;
+    if(nameLeft){
+      const lab=m.name.length>18?m.name.slice(0,17)+'…':m.name;
+      const ly=placeY(yOf(m.revenue[0]));
+      s+=`<text x="${L-8}" y="${ly+3}" text-anchor="end" font-size="9.5" font-weight="600" fill="${col}">${esc(lab)}</text>`;
+    }
+    if(showPts)m.revenue.forEach((v,i)=>{
+      s+=`<circle cx="${xOf(i)}" cy="${yOf(v)}" r="2.6" fill="${col}"><title>${esc(m.name)} — ${ddmm(wk[i])}: ${fmtShort(v)}</title></circle>`;
+    });
+  });
+  // nhãn số tiền: dồn theo từng cột tuần, giãn tối thiểu 12px để các đường không bị chồng chữ
+  if(showLab)for(let i=0;i<n;i++){
+    const colpts=ms.map(m=>({y:yOf(m.revenue[i]),v:m.revenue[i]})).sort((a,b)=>a.y-b.y);
+    let prev=-1e9;
+    colpts.forEach(p=>{let ly=p.y-7; if(ly-prev<12)ly=prev+12; prev=ly;
+      s+=`<text x="${xOf(i)}" y="${ly}" text-anchor="middle" font-size="8.5" fill="#cdd6ea">${fmtShort(p.v)}</text>`;});
+  }
+  return `<svg class="zoomable" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:320px" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+
+// dựng bộ lọc (tìm theo tên + toggle ngành) và vẽ lại chart khi đổi lựa chọn
+function buildLineChart(mount, series){
+  if(!mount)return;
+  const ms=series.merchants, wk=series.weeks;
+  // mặc định: chọn sẵn 2 merchant doanh thu cao nhất + 2 thấp nhất (tuần hiện tại)
+  const last=a=>a[a.length-1];
+  const ranked=[...ms].sort((a,b)=>last(b.revenue)-last(a.revenue));
+  const sel=new Set([...ranked.slice(0,2),...ranked.slice(-2)].map(m=>m.id));
+  let search='';
+  mount.innerHTML=`
+    <div class="lcbar">
+      <input class="lcsearch" placeholder="🔎 Tìm merchant theo tên...">
+      <button class="lcbtn" data-act="all">Chọn tất cả</button>
+      <button class="lcbtn" data-act="none">Bỏ chọn</button>
+      <span class="lccount"></span>
+    </div>
+    <div class="lccats"></div>
+    <div class="lclist"></div>
+    <div class="lcchart"></div>
+    <div class="lchint">💡 Chọn ≤8 merchant để hiện số tiền theo tuần · rê chuột vào đường để xem chi tiết</div>`;
+  const $=s=>mount.querySelector(s);
+  const listEl=$('.lclist'), chartEl=$('.lcchart'), countEl=$('.lccount'), catsEl=$('.lccats');
+  const cats=[...new Set(ms.map(m=>m.category))];
+
+  function drawCats(){
+    catsEl.innerHTML=cats.map(c=>{
+      const on=ms.filter(m=>m.category===c).some(m=>sel.has(m.id));
+      return `<span data-cat="${esc(c)}" class="${on?'':'off'}"><i style="background:${catColor(c)}"></i>${esc(c)}</span>`;
+    }).join('');
+    catsEl.querySelectorAll('span').forEach(sp=>sp.onclick=()=>{
+      const mine=ms.filter(m=>m.category===sp.dataset.cat);
+      const allOn=mine.every(m=>sel.has(m.id));
+      mine.forEach(m=>allOn?sel.delete(m.id):sel.add(m.id));
+      refresh();
+    });
+  }
+  function drawList(){
+    const q=search.toLowerCase();
+    let items=ms.filter(m=>m.name.toLowerCase().includes(q));
+    items=[...items].sort((a,b)=>(sel.has(b.id)?1:0)-(sel.has(a.id)?1:0));
+    listEl.innerHTML=items.length?items.map(m=>
+      `<label class="lcitem" data-id="${m.id}"><input type="checkbox" ${sel.has(m.id)?'checked':''}>`
+      +`<span class="dot" style="background:${catColor(m.category)}"></span>${esc(m.name)}</label>`).join('')
+      :`<div style="font-size:12px;color:var(--muted);padding:6px">Không có merchant khớp "${esc(search)}"</div>`;
+    listEl.querySelectorAll('.lcitem input').forEach(inp=>{
+      inp.onchange=()=>{const id=inp.closest('.lcitem').dataset.id;
+        inp.checked?sel.add(id):sel.delete(id);refresh();};
+    });
+  }
+  function drawChart(){
+    chartEl.innerHTML=lineSVG(wk, ms.filter(m=>sel.has(m.id)));
+  }
+  function refresh(redrawList=true){
+    countEl.textContent=`${sel.size}/${ms.length} merchant`;
+    drawCats(); if(redrawList)drawList(); drawChart();
+  }
+  $('.lcsearch').oninput=e=>{search=e.target.value;drawList();};
+  mount.querySelectorAll('.lcbtn').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.act;
+    if(a==='all')ms.forEach(m=>sel.add(m.id)); else sel.clear();
+    refresh();
+  });
+  refresh();
+}
+
+const VIZ={
+  overview(r){
+    const wc=cls(r.revenue_wow_pct);
+    return `<div class="vtitle">Tổng quan danh mục — tuần <span class="hl">${r._week||''}</span></div>
+      <div class="kpis">
+        <div class="tile"><div class="lab">Tổng doanh thu</div><div class="val">${esc(fmt(r.total_revenue))}</div></div>
+        <div class="tile"><div class="lab">Lợi nhuận gộp</div><div class="val">${esc(fmt(r.total_gross_profit))}</div></div>
+        <div class="tile"><div class="lab">WoW doanh thu</div><div class="val ${wc}">${sgn(r.revenue_wow_pct)}</div></div>
+      </div>
+      <div class="pills">
+        <div class="pill up" onclick="askQ('Top 40 tăng trưởng tuần này')"><b>${r.n_up}</b>tăng<span class="hintx">bấm xem ↗</span></div>
+        <div class="pill down" onclick="askQ('Top 40 merchant giảm tuần này')"><b>${r.n_down}</b>giảm<span class="hintx">bấm xem ↗</span></div>
+        <div class="pill warn" onclick="askQ('Ai sắp churn?')"><b>${r.n_churn_high}</b>churn Cao<span class="hintx">bấm xem ↗</span></div>
+      </div>
+      <div class="cols">
+        <div><div class="colh">📈 Tăng mạnh nhất</div>${columnChart(r.top_up)}</div>
+        <div><div class="colh">📉 Giảm mạnh nhất</div>${columnChart(r.top_down)}</div>
+      </div>`;
+  },
+  growth(r){
+    if(!r.items.length)return `<div class="vtitle">Chưa có merchant tăng trưởng dương.</div>`;
+    return `<div class="vtitle">🏆 Top <span class="hl">${r.items.length}</span> tăng trưởng tuần này (doanh thu tuần trước → tuần này)</div>`
+      +columnChart(r.items);
+  },
+  uptrend(r){
+    if(!r.items.length)return `<div class="vtitle">Không có merchant tăng đều mỗi tuần.</div>`;
+    const maxAbs=Math.max(...r.items.map(m=>Math.abs(m.growth_total_pct)),0.01);
+    return `<div class="vtitle">📈 <span class="hl">${r.items.length}</span> merchant tăng đều <span style="font-weight:400;color:var(--muted);font-size:12px">— xếp theo số tuần tăng liên tiếp & mức tăng cả kỳ</span></div>`
+      +`<div class="cardgrid">`+r.items.map((m,i)=>{
+        const mono=m.streak>=m.total_steps?` · 🟢 tăng cả ${m.total_steps} tuần`:'';
+        return `<div class="rrow"><div class="rnum">${i+1}</div><div>
+          <div class="rname"><span class="nm">${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
+            <span class="rval up">+${m.growth_total_pct}%</span></div>
+          <div class="rsub">tăng liên tiếp <b style="color:var(--txt)">${m.streak}/${m.total_steps} tuần</b>${mono} · ${esc(m.revenue_first_fmt)} <span class="arrow">→</span> <span class="now">${esc(m.revenue_fmt)}</span></div>
+          ${barL(m.growth_total_pct,maxAbs)}</div></div>`;
+      }).join('')+`</div>`;
+  },
+  decline(r){
+    if(!r.items.length)return `<div class="vtitle">Không có merchant nào giảm tuần này 🎉</div>`;
+    return `<div class="vtitle"><span class="hl">${r.count}</span> merchant giảm doanh thu tuần này (tuần trước → tuần này)</div>`
+      +columnChart(r.items)
+      +`<div class="cardgrid" style="margin-top:8px">`+r.items.map(m=>
+        `<div class="rrow"><div class="rnum">•</div><div>
+          <div class="rname"><span class="nm">${esc(m.name)}</span><span class="rval down">${sgn(m.wow_pct)}</span></div>
+          <div class="rsub">giao dịch ${sgn(m.txn_wow)} · khách quay lại ${sgn(m.rr_wow)} · ${lvBadge(m.churn)}</div>
+        </div></div>`).join('')+`</div>`;
+  },
+  voucher(r){
+    if(!r.items.length)return `<div class="vtitle">Chưa có merchant khớp tiêu chí voucher.</div>`;
+    return `<div class="vtitle">🎟️ <span class="hl">${r.items.length}</span> merchant nên giữ chân (ưu tiên theo lợi nhuận)</div>
+      <div class="cardgrid">`+r.items.map(m=>`
+      <div class="card">
+        <div class="chead"><span class="cname">${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
+          <span class="rval down">${sgn(m.wow_pct)}</span></div>
+        <div class="cstats"><span>Lợi nhuận <b>${esc(m.gross_profit_fmt)}</b></span>
+          <span>Khách quay lại <b>${sgn(m.rr_wow)}</b></span></div>
+        <div class="cstats" style="margin-bottom:0"><span style="flex:1">Biên LN <b>${m.margin_pct}%</b>${m.thin_margin?' ⚠️ mỏng':''}</span></div>
+        ${meter(m.margin_pct,m.thin_margin)}
+        <div class="rec ${m.thin_margin?'thin':''}">${esc(m.recommendation)}</div>
+      </div>`).join('')+`</div>`;
+  },
+  churn(r){
+    if(!r.items.length)return `<div class="vtitle">Không có merchant churn risk Cao 🎉</div>`;
+    return `<div class="vtitle">⚠️ Cảnh báo churn: <span class="hl">${r.n_high}</span> Cao · ${r.n_medium} Trung bình</div>
+      <div class="cardgrid">`+r.items.map(m=>`
+      <div class="card lv-${lvKey(m.churn)}">
+        <div class="chead"><span class="cname">${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
+          ${lvBadge(m.churn)}</div>
+        <div class="cstats"><span>WoW <b class="rval ${cls(m.wow_pct)}">${sgn(m.wow_pct)}</b></span>
+          <span>Khách quay lại <b>${m.rr_now}%</b></span>
+          <span>Giảm liên tiếp <b>${m.consec_decline} tuần</b></span></div>
+        <div class="reason">${esc(m.reason)}</div>
+      </div>`).join('')+`</div>`;
+  },
+  at_risk(r){
+    if(!r.items.length)return `<div class="vtitle">Không có merchant giá trị cao đang rủi ro.</div>`;
+    const maxV=Math.max(...r.items.map(m=>m.value_at_risk),1);
+    return `<div class="vtitle">💎 Merchant quan trọng đang lung lay — ưu tiên cứu theo <span class="hl">giá trị nguy cơ mất</span></div>
+      <div class="cardgrid">`+r.items.map((m,i)=>`
+      <div class="card lv-${lvKey(m.churn)}">
+        <div class="chead"><span class="cname">${i+1}. ${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
+          ${lvBadge(m.churn)}</div>
+        <div class="cstats"><span>Lợi nhuận 4 tuần <b>${esc(m.gross_profit_last4_fmt)}</b></span>
+          <span>Giá trị nguy cơ <b style="color:var(--down)">${esc(m.value_at_risk_fmt)}</b></span></div>
+        <div class="meter"><div class="mf" style="width:${m.value_at_risk/maxV*100}%;background:linear-gradient(90deg,var(--down),#c0392b)"></div></div>
+        <div class="reason">${esc(m.reason)}</div>
+      </div>`).join('')+`</div>`;
+  },
+  decompose(r){
+    if(!r.found)return `<div class="vtitle">Không tìm thấy merchant phù hợp. Nêu rõ tên giúp mình nhé.</div>`;
+    const drivers=[
+      ['Số lượng giao dịch',r.txn_wow,r.qty_effect_pct],
+      ['Giá trị đơn (AOV)',r.aov_wow,r.aov_effect_pct],
+      ['Tỷ lệ khách quay lại',r.rr_wow,null],
+    ];
+    const maxAbs=Math.max(...drivers.map(d=>Math.abs(d[1])),0.01);
+    const rows=drivers.map(([nm,wow,eff])=>`
+      <div class="drow"><div class="dlab"><span class="nm">${nm}</span>
+        <span class="vv ${cls(wow)}">${sgn(wow)}${eff!==null?` <span style="color:var(--muted);font-weight:400">(≈${sgn(eff)} DT)</span>`:''}</span></div>
+        ${wowBar(wow,maxAbs)}</div>`).join('');
+    return `<div class="vtitle">Bóc tách nguyên nhân — <span class="hl">${esc(r.name)}</span></div>
+      <div class="decohead ${cls(r.wow_pct)}">${sgn(r.wow_pct)} <span style="font-size:14px;color:var(--muted);font-weight:500">doanh thu WoW</span></div>
+      <div class="deco">${rows}</div>
+      <div class="colh">Đề xuất hành động</div>
+      <ul class="actions">${r.actions.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`;
+  },
+};
+
+function fmt(x){return Math.round(x).toLocaleString('vi-VN')+' đ';}
+
+// minimal markdown (cho phần diễn giải gập + freeform)
+function md(t){
+  if(!t)return'';
+  const lines=String(t).split('\n');let html='',tbl=[],inUl=false;
+  const inline=s=>s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/`(.+?)`/g,'<code>$1</code>');
+  const flush=()=>{if(!tbl.length)return;const rows=tbl.filter(r=>!/^\|[\s:|-]+\|?$/.test(r.trim()));
+    let h='<table>';rows.forEach((r,i)=>{const c=r.split('|').slice(1,-1).map(x=>inline(esc(x.trim())));
+      const tg=i===0?'th':'td';h+='<tr>'+c.map(x=>`<${tg}>${x}</${tg}>`).join('')+'</tr>';});html+=h+'</table>';tbl=[];};
+  for(let ln of lines){
+    if(/^\s*\|.*\|\s*$/.test(ln)){tbl.push(ln);continue;}else flush();
+    if(/^\s*[-*]\s+/.test(ln)){if(!inUl){html+='<ul>';inUl=true;}html+='<li>'+inline(esc(ln.replace(/^\s*[-*]\s+/,'')))+'</li>';continue;}
+    else if(inUl){html+='</ul>';inUl=false;}
+    if(/^#{1,3}\s/.test(ln))html+='<h3>'+inline(esc(ln.replace(/^#+\s/,'')))+'</h3>';
+    else if(ln.trim()==='')html+='<br>';else html+='<div>'+inline(esc(ln))+'</div>';
+  }
+  flush();if(inUl)html+='</ul>';return html;
+}
+
+function renderAnswer(j){
+  const r=j.result||{};const intent=r.intent||j.intent;
+  if(VIZ[intent] && (r.items||r.top_up||r.found!==undefined||intent==='overview')){
+    if(intent==='overview')r._week=(currentMeta&&currentMeta.current_week)||'';
+    const viz=VIZ[intent](r);
+    const prose=j.answer?`<details class="prose"><summary>💬 Diễn giải & đề xuất chi tiết</summary><div class="pbody">${md(j.answer)}</div></details>`:'';
+    return viz+prose;
+  }
+  return md(j.answer||'(không có nội dung)');
+}
+
+let currentMeta=null;
+function addMsg(text,who,isHtml){
+  const d=document.createElement('div');d.className='msg '+who;
+  d.innerHTML=isHtml?text:esc(text);
+  if(drop.parentNode)drop.remove();
+  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;
+}
+const loading=t=>`<span class="dots"><span></span><span></span><span></span></span> ${t}`;
+
+async function upload(file){
+  addMsg('📎 '+file.name,'me');
+  const load=addMsg(loading('Đang nạp dữ liệu…'),'bot',true);
+  const fd=new FormData();fd.append('file',file);
+  try{
+    const r=await fetch('/api/upload',{method:'POST',body:fd});
+    const j=await r.json();
+    if(!r.ok){load.innerHTML='<span class="err">⚠ '+esc(j.error||'Lỗi nạp file')+'</span>';return;}
+    sessionId=j.session_id;currentMeta=j.meta;const m=j.meta;
+    statusEl.innerHTML=`<b>${m.n_merchants}</b> merchant · <b>${m.n_weeks}</b> tuần · tuần hiện tại <b>${m.current_week}</b>`;
+    let html=md(`Đã nạp **${m.n_merchants} merchant**, **${m.n_weeks} tuần** (${m.week_first||''}${m.week_first?' → ':''}**${m.current_week}**).`);
+    if(j.series){
+      html+=`<div class="vtitle" style="margin-top:12px">📈 Doanh thu merchant qua ${m.n_weeks} tuần <span style="font-weight:400;color:var(--muted);font-size:12px">— lọc theo tên/ngành; chọn ít merchant để hiện số tiền theo tuần</span></div><div class="lcmount"></div>`;
+    }
+    html+=md(`\nHỏi mình bất cứ điều gì, hoặc bấm gợi ý bên dưới 👇`);
+    load.innerHTML=html;
+    if(j.series)buildLineChart(load.querySelector('.lcmount'),j.series);
+    q.disabled=false;send.disabled=false;renderChips();q.focus();
+  }catch(e){load.innerHTML='<span class="err">⚠ Lỗi kết nối: '+esc(e)+'</span>';}
+}
+
+async function ask(){
+  const text=q.value.trim();if(!text||!sessionId)return;
+  addMsg(text,'me');q.value='';send.disabled=true;
+  const load=addMsg(loading('Đang phân tích…'),'bot',true);
+  try{
+    const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_id:sessionId,question:text})});
+    const j=await r.json();
+    if(!r.ok)load.innerHTML='<span class="err">⚠ '+esc(j.error||'Lỗi')+'</span>';
+    else load.innerHTML=renderAnswer(j);
+  }catch(e){load.innerHTML='<span class="err">⚠ Lỗi kết nối: '+esc(e)+'</span>';}
+  send.disabled=false;chat.scrollTop=chat.scrollHeight;
+}
+
+// dùng cho onclick trong nội dung bot (vd ô tổng quan) — đặt câu hỏi tương ứng
+function askQ(t){if(!sessionId)return;q.value=t;ask();}
+
+send.onclick=ask;
+q.addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
+fileInput.onchange=e=>{if(e.target.files[0])upload(e.target.files[0]);};
+['dragover','dragenter'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList&&drop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList&&drop.classList.remove('hot');}));
+document.addEventListener('drop',e=>{if(e.dataTransfer.files[0])upload(e.dataTransfer.files[0]);});
+</script>
+</body>
+</html>

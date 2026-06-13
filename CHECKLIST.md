@@ -17,40 +17,58 @@
 
 ---
 
-## ⬜ BUILD AGENT v1 (cốt lõi)
+## ✅ BUILD AGENT v1 (cốt lõi) — XONG, test local PASS
 
-### Backend phân tích — `pipeline.py`
-- [ ] Đọc CSV/Excel bằng pandas; tự nhận diện schema, thiếu cột → báo rõ
-- [ ] Tính chỉ số phái sinh: tỷ lệ khách quay lại, biên lợi nhuận, khách mới
-- [ ] **4.1** Phát hiện merchant giảm (WoW âm + nguyên nhân định lượng)
-- [ ] **4.2** Top N tăng trưởng (bảng xếp hạng)
-- [ ] **4.3** Gợi ý voucher — ưu tiên theo lợi nhuận, cảnh báo merchant biên mỏng
-- [ ] **4.4** Cảnh báo churn 3 mức (Cao/TB/Thấp) — quy tắc định lượng
-- [ ] **4.5** Tổng quan danh mục (tổng doanh thu/lợi nhuận WoW + top mover)
-- [ ] **4.6** Merchant quan trọng đang lung lay (churn × lợi nhuận)
-- [ ] **4.7** Bóc tách nguyên nhân (số lượng / giá trị đơn / giữ chân)
-- [ ] Mọi con số tính BẰNG CODE — không để LLM tự tính
+### Backend phân tích — `pipeline.py` ✅
+- [x] Đọc CSV/Excel bằng pandas; tự nhận diện schema, thiếu cột → báo rõ
+- [x] Tính chỉ số phái sinh: tỷ lệ khách quay lại, biên lợi nhuận, khách mới
+- [x] **4.1** Phát hiện merchant giảm (WoW âm + nguyên nhân định lượng)
+- [x] **4.2** Top N tăng trưởng (bảng xếp hạng)
+- [x] **4.3** Gợi ý voucher — ưu tiên theo lợi nhuận, cảnh báo merchant biên mỏng
+- [x] **4.4** Cảnh báo churn 3 mức (Cao/TB/Thấp) — quy tắc định lượng (khớp verify: 8 Cao / 11 TB)
+- [x] **4.5** Tổng quan danh mục (tổng doanh thu/lợi nhuận WoW + top mover)
+- [x] **4.6** Merchant quan trọng đang lung lay (churn × lợi nhuận)
+- [x] **4.7** Bóc tách nguyên nhân (số lượng / giá trị đơn / giữ chân)
+- [x] **(mới) Tăng đều / xu hướng tăng** — merchant tăng liên tiếp nhiều tuần (dùng cả 8 tuần)
+- [x] **(mới) `digest()`** — bảng toàn bộ chỉ số đã tính cho 40 merchant (phục vụ hỏi tự do)
+- [x] **(mới) `series_all()`** — chuỗi doanh thu 8 tuần từng merchant (phục vụ line chart)
+- [x] Mọi con số tính BẰNG CODE — không để LLM tự tính
 
-### Tầng LLM (Qwen MaaS) — luồng 2 lượt
-- [ ] Lượt 1: intent router → trả JSON `{intent, params}`, code dispatch (không dùng native tool-calling)
-- [ ] Parse JSON có fallback; `unknown`/lỗi → gợi ý lại, không crash
-- [ ] Lượt 2: diễn giải số đã tính → câu trả lời 4 phần (kết luận → số liệu → nguyên nhân → đề xuất)
+### Tầng LLM (Qwen MaaS) — luồng 2 lượt — `llm.py` ✅
+- [x] Lượt 1: intent router → trả JSON `{intent, params}`, code dispatch (không dùng native tool-calling)
+- [x] Parse JSON có fallback; `unknown`/lỗi → gợi ý lại, không crash
+- [x] Lượt 2: diễn giải số đã tính → câu trả lời 4 phần (kết luận → số liệu → nguyên nhân → đề xuất)
+- [x] Fallback rule-based khi thiếu key MaaS → chạy/test local không cần MaaS
+- [x] **(mới) Freeform Q&A**: câu lạ/so sánh/lọc → đưa cả `digest` cho LLM tự trả lời, vẫn không bịa số
+- [x] **(mới) Router mở rộng**: thêm intent `uptrend`; bỏ từ khóa "top" gây nhầm growth/decline
 
-### API + UI — `main.py`, `static/index.html`
-- [ ] `GET /health` → 200 (BẮT BUỘC cho AgentBase)
-- [ ] `GET /` → trả UI
-- [ ] `POST /api/analyze` (JSON / multipart) cho web view
-- [ ] `POST /invocations` (JSON transcript→analysis) cho BTC test
-- [ ] Listen `0.0.0.0:8080`
-- [ ] State DataFrame in-memory theo session (upload-rồi-hỏi cùng phiên)
-- [ ] UI chat: upload kéo-thả, hiện trạng thái file (số merchant/tuần), chip gợi ý
-- [ ] Render bảng, in đậm số liệu, badge màu churn (Cao=đỏ, TB=vàng), loading, báo lỗi
+### API + UI — `main.py`, `static/index.html` ✅
+- [x] `GET /health` → 200 (BẮT BUỘC cho AgentBase)
+- [x] `GET /` → trả UI
+- [x] `POST /api/upload` + `POST /api/analyze` (JSON / multipart) cho web view
+- [x] `POST /invocations` (JSON, hỗ trợ csv_text/file_base64 inline) cho BTC test
+- [x] Listen `0.0.0.0:8080`
+- [x] State DataFrame in-memory theo session (upload-rồi-hỏi cùng phiên); mất session → 409 báo upload lại
+- [x] UI chat: upload kéo-thả, hiện trạng thái file (số merchant/tuần), chip gợi ý
+- [x] Render bảng, in đậm số liệu, badge màu churn (Cao=đỏ, TB=vàng), loading, báo lỗi
 
-### Đóng gói
-- [ ] `requirements.txt`
-- [ ] `Dockerfile` (python-slim, EXPOSE 8080)
-- [ ] `.env` (KHÔNG commit) + `.gitignore`
-- [ ] Test local `localhost:8080` — chạy đủ 7 loại câu hỏi với CSV mẫu
+### Đóng gói ✅
+- [x] `requirements.txt`
+- [x] `Dockerfile` (python:3.11-slim, EXPOSE 8080)
+- [x] `.env` (KHÔNG commit) + `.gitignore` (đã có) + `.env.example`
+- [x] Test local — chạy đủ 8 loại câu hỏi với CSV mẫu qua TestClient (ALL PASS)
+
+---
+
+## ✅ NÂNG CẤP UI/UX & TRỰC QUAN (đã làm thêm) — `static/index.html`
+
+- [x] Biểu đồ **2 cột** (tuần trước xám / tuần này màu) cho tổng quan/tăng/giảm — ghi rõ **số tiền** + %WoW
+- [x] **Line chart 8 tuần** toàn merchant: tô màu theo ngành, điểm + số tiền theo tuần, tooltip
+- [x] **Bộ lọc line chart**: ô tìm theo tên, checkbox 40 merchant, toggle theo ngành, chọn tất cả/bỏ chọn
+- [x] Mặc định chọn **2 cao nhất + 2 thấp nhất**; tick là tự **dồn lên đầu**; nhãn số tiền **giãn không chồng**
+- [x] Tên merchant gắn **bên trái** đường line (thay mốc tiền) khi chọn ít
+- [x] Ô tổng quan (tăng/giảm/churn) **bấm được** → liệt kê đúng danh sách merchant nhóm đó
+- [x] Badge churn màu, render bảng, chip gợi ý (+ "Ai tăng đều mỗi tuần?")
 
 ---
 
@@ -100,7 +118,7 @@
 
 - [ ] Demo insight "doanh thu cao ≠ lợi nhuận cao" (tận dụng cột lợi nhuận)
 - [ ] Demo "merchant quan trọng đang lung lay" — câu hỏi sát thực tế AM nhất
-- [ ] UI đẹp, hiện đại, 1 màn hình không cần hướng dẫn
+- [x] UI đẹp, hiện đại, 1 màn hình không cần hướng dẫn (chart cột + line + bộ lọc + pill bấm được)
 - [ ] Câu trả lời luôn đúng cấu trúc 4 phần + giọng tư vấn
 - [ ] Quay demo theo kịch bản spec mục 10, mạch lạc, 1 lần ăn ngay
 
@@ -108,13 +126,14 @@
 
 ## 🗓 ĐƯỜNG TỚI HẠN (gợi ý)
 
-| Ngày | Việc |
-|---|---|
-| 13–14/06 | Build v1: pipeline + main + UI + Docker; test local |
-| 15/06 | Deploy lên AgentBase → ACTIVE → test endpoint public |
-| 16/06 | README + quay video demo; đệm sửa lỗi |
-| **17/06 12:00** | **SUBMIT (cứng)** |
-| 18/06 12:00 | Fail-fix (nếu cần) |
+| Ngày | Việc | Trạng thái |
+|---|---|---|
+| 13–14/06 | Build v1: pipeline + main + UI + Docker; test local | ✅ XONG (13/06) |
+| 14–15/06 | Lấy key MaaS → `.env` → test LLM thật (router + freeform) | ⬜ |
+| 15/06 | Deploy lên AgentBase → ACTIVE → test endpoint public | ⬜ |
+| 16/06 | README (điền endpoint) + quay video demo; đệm sửa lỗi | ⬜ |
+| **17/06 12:00** | **SUBMIT (cứng)** | ⬜ |
+| 18/06 12:00 | Fail-fix (nếu cần) | ⬜ |
 
 ---
 
@@ -126,5 +145,6 @@
 | `SPEC-Merchant-Growth-Agent.md` | Spec chính (đồng bộ) ✅ |
 | `merchant_performance_sample.csv` | Dữ liệu mẫu đã verify ✅ |
 | `make_sample_data.py` / `verify_sample_data.py` | Sinh + kiểm tra dữ liệu ✅ |
-| `README.md` | Template — cần điền sau khi build |
-| `pipeline.py` / `main.py` / `static/index.html` / `Dockerfile` / `requirements.txt` | ⬜ Chưa build |
+| `README.md` | Đã điền (Merchant Growth Agent + khai báo) ✅ |
+| `pipeline.py` / `llm.py` / `main.py` / `static/index.html` | Đã build + test local PASS ✅ |
+| `Dockerfile` / `requirements.txt` / `.env.example` | ✅ |
