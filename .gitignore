@@ -17,3 +17,7 @@ node_modules/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# AgentBase skill bundle (cài cục bộ để deploy, không nộp vào repo)
+.claude/
+.agentbase/

@@ -131,11 +131,18 @@ class MerchantAnalyzer:
             tot = g["tpv"].sum() or 1
             by_type = g.groupby("txn_type")["tpv"].sum()
             mix = {str(k): round(v / tot * 100, 1) for k, v in by_type.items() if str(k)}
+            # số tuyệt đối theo TỪNG kênh (sum riêng từng loại)
+            tpv_by_type = {str(k): float(v) for k, v in by_type.items() if str(k)}
             wal = g[g["txn_type"].astype(str).str.lower() == "wallet"]
             wal_tot = wal["tpv"].sum() or 0
-            pl = wal[wal["sof"].astype(str).str.lower() == "paylater"]["tpv"].sum()
+            # số tuyệt đối theo TỪNG SOF (Paylater / Others) — sum riêng từng loại
+            by_sof = wal.groupby("sof")["tpv"].sum()
+            tpv_by_sof = {str(k): float(v) for k, v in by_sof.items()
+                          if str(k) and str(k).lower() != "nan"}
+            pl = tpv_by_sof.get("Paylater", 0.0)
             paylater_pct = round(pl / wal_tot * 100, 1) if wal_tot else 0.0
-            out[str(mid)] = {"mix": mix, "paylater_pct": paylater_pct}
+            out[str(mid)] = {"mix": mix, "paylater_pct": paylater_pct,
+                             "tpv_by_type": tpv_by_type, "tpv_by_sof": tpv_by_sof}
         return out
 
     def _weekly(self, g: pd.DataFrame) -> tuple[list[float], list[float]]:
@@ -272,6 +279,42 @@ class MerchantAnalyzer:
             })
         return {"weeks": weeks, "merchants": merchants}
 
+    def merchant_names(self) -> list[str]:
+        return [m["name"] for m in self._metrics.values()]
+
+    # ---------- Cơ cấu thanh toán (sum riêng từng kênh + từng SOF) ----------
+    def payment(self, category=None, **_) -> dict[str, Any]:
+        df = self.df
+        if category:
+            c = str(category).lower()
+            df = df[df["category"].astype(str).str.lower().str.contains(c, na=False)]
+        total = float(df["tpv"].sum())
+        tt = df.groupby("txn_type").agg(tpv=("tpv", "sum"), txn=("txn", "sum"))
+        types = []
+        for k, row in tt.iterrows():
+            if not str(k):
+                continue
+            types.append({"name": str(k), "tpv": round(row["tpv"]), "tpv_fmt": _fmt_vnd(row["tpv"]),
+                          "txn": int(row["txn"]),
+                          "pct": round(row["tpv"] / total * 100, 1) if total else 0.0})
+        types.sort(key=lambda x: -x["tpv"])
+        wal = df[df["txn_type"].astype(str).str.lower() == "wallet"]
+        wal_tot = float(wal["tpv"].sum())
+        ss = wal.groupby("sof").agg(tpv=("tpv", "sum"), txn=("txn", "sum"))
+        sof = []
+        for k, row in ss.iterrows():
+            if not str(k) or str(k).lower() == "nan":
+                continue
+            sof.append({"name": str(k), "tpv": round(row["tpv"]), "tpv_fmt": _fmt_vnd(row["tpv"]),
+                        "txn": int(row["txn"]),
+                        "pct_wallet": round(row["tpv"] / wal_tot * 100, 1) if wal_tot else 0.0,
+                        "pct_total": round(row["tpv"] / total * 100, 1) if total else 0.0})
+        sof.sort(key=lambda x: -x["tpv"])
+        return {"intent": "payment", "scope": _scope(category),
+                "total_tpv": round(total), "total_tpv_fmt": _fmt_vnd(total),
+                "wallet_tpv": round(wal_tot), "wallet_tpv_fmt": _fmt_vnd(wal_tot),
+                "types": types, "sof": sof}
+
     def digest(self) -> list[dict[str, Any]]:
         rows = []
         for m in self._metrics.values():
@@ -289,6 +332,9 @@ class MerchantAnalyzer:
                 "weeks_increasing_streak": m["up_streak"],
                 "payment_mix_pct": m["pay"]["mix"],
                 "wallet_paylater_pct": m["pay"]["paylater_pct"],
+                # số tuyệt đối (toàn kỳ) — CỘNG các giá trị này để ra tổng theo kênh/SOF
+                "tpv_by_type": {k: round(v) for k, v in m["pay"]["tpv_by_type"].items()},
+                "tpv_by_sof": {k: round(v) for k, v in m["pay"]["tpv_by_sof"].items()},
             })
         return rows
 

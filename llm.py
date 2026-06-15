@@ -18,7 +18,7 @@ from typing import Any
 
 VALID_INTENTS = {
     "overview", "decline", "growth", "uptrend", "voucher",
-    "churn", "at_risk", "decompose", "forecast", "freeform", "unknown",
+    "churn", "at_risk", "decompose", "forecast", "payment", "freeform", "unknown",
 }
 
 _client = None
@@ -56,7 +56,7 @@ KHÔNG kèm giải thích, theo schema:
 {"intent": "...", "params": {"category": null, "top_n": 10, "merchant_name": null, "period": "month"}}
 
 intent ∈ [overview, decline, growth, uptrend, voucher, churn, at_risk, decompose, forecast, freeform, unknown]
-- overview: tổng quan danh mục / "tình hình thế nào"
+- overview: tổng quan TOÀN DANH MỤC / "tình hình thế nào" (KHÔNG dùng khi hỏi về 1 merchant cụ thể)
 - decline: merchant nào giảm
 - growth: top tăng trưởng / xếp hạng tăng
 - uptrend: merchant tăng ĐỀU/liên tục nhiều tuần
@@ -65,12 +65,14 @@ intent ∈ [overview, decline, growth, uptrend, voucher, churn, at_risk, decompo
 - at_risk: merchant quan trọng đang lung lay / đáng cứu
 - decompose: vì sao [merchant] tăng/giảm
 - forecast: dự phóng/ước lượng cuối tháng, "cao hơn tháng trước không", so với tháng trước
-- freeform: câu so sánh/tổng hợp/lọc nhiều chiều/không khớp rõ → trả lời dựa trên TOÀN BỘ số liệu đã tính
+- freeform: câu so sánh/tổng hợp/lọc nhiều chiều/không khớp rõ; HOẶC hỏi về MỘT merchant cụ thể (vd "Tiệm Bánh Mì 36 doanh số thế nào", "tình hình của X") khi KHÔNG hỏi "vì sao" → trả lời dựa trên TOÀN BỘ số liệu đã tính (set merchant_name)
 - unknown: hoàn toàn ngoài chủ đề dữ liệu merchant
 params.category: ngành (Sub-cate) nếu nêu (vd "Fashion", "Electronics", "Coffee & Tea"), không thì null.
 params.merchant_name: tên merchant nếu hỏi 1 merchant cụ thể.
 params.top_n: số nếu nêu (vd "top 5" -> 5), mặc định 10.
-params.period: "week" nếu câu hỏi nói về TUẦN/WoW; còn lại để "month" (mặc định, theo tháng & dự phóng)."""
+params.period: "week" nếu câu hỏi nói về TUẦN/WoW; còn lại để "month" (mặc định, theo tháng & dự phóng).
+
+QUY TẮC QUAN TRỌNG: 8 nhóm cấu trúc (overview, decline, growth, uptrend, voucher, churn, at_risk, decompose) và forecast CHỈ chọn khi câu hỏi RÕ RÀNG thuộc đúng nhóm đó. MỌI câu hỏi khác — câu mở, câu suy luận, so sánh, lọc, hỏi về 1 merchant/ngành cụ thể, hay câu chưa từng thấy — PHẢI chọn "freeform" để agent TỰ SUY NGHĨ trên dữ liệu đã tính. Hạn chế tối đa "unknown": chỉ khi câu hoàn toàn KHÔNG liên quan dữ liệu merchant (vd hỏi thời tiết). Khi phân vân giữa một nhóm cấu trúc và freeform → CHỌN freeform."""
 
 _ROUTER_FEWSHOT = [
     ("Tổng quan tháng này thế nào?", {"intent": "overview", "params": {"category": None, "top_n": 10, "merchant_name": None, "period": "month"}}),
@@ -79,6 +81,7 @@ _ROUTER_FEWSHOT = [
     ("Dự phóng cuối tháng có cao hơn tháng trước không?", {"intent": "forecast", "params": {"category": None, "top_n": 10, "merchant_name": None, "period": "month"}}),
     ("Vì sao Cafe Workspace giảm?", {"intent": "decompose", "params": {"category": None, "top_n": 10, "merchant_name": "Cafe Workspace", "period": "month"}}),
     ("Ai quan trọng đang lung lay?", {"intent": "at_risk", "params": {"category": None, "top_n": 10, "merchant_name": None, "period": "month"}}),
+    ("Tiệm Bánh Mì 36 doanh số thế nào?", {"intent": "freeform", "params": {"category": None, "top_n": 10, "merchant_name": "Tiệm Bánh Mì 36", "period": "month"}}),
 ]
 
 
@@ -118,6 +121,9 @@ def _extract_json(text: str) -> dict | None:
 
 
 _KW = [
+    ("payment", ["cơ cấu thanh toán", "cơ cấu kênh", "kênh thanh toán",
+                 "phương thức thanh toán", "theo từng kênh", "tỷ trọng kênh",
+                 "cơ cấu sof", "thanh toán theo loại"]),
     ("overview", ["tổng quan", "tình hình", "bức tranh", "danh mục thế nào"]),
     ("forecast", ["dự phóng", "dự báo", "ước lượng", "cuối tháng", "cao hơn tháng trước",
                   "so với tháng trước", "hết tháng", "est", "forecast"]),
@@ -157,6 +163,11 @@ def _keyword_route(q: str) -> dict[str, Any]:
                        "merchant_name": None, "period": _detect_period(q)}}
 
 
+# Định tuyến tức thì bằng từ khóa (không gọi LLM) — dùng cho nhóm preset.
+def keyword_route(question: str) -> dict[str, Any]:
+    return _keyword_route(question)
+
+
 # ============================ LƯỢT 2: DIỄN GIẢI ============================
 
 _INTERP_SYSTEM = """Bạn là chuyên gia tư vấn tăng trưởng merchant, nói tiếng Việt,
@@ -182,7 +193,9 @@ mom_pct=%dự phóng tháng này vs tháng trước; wow_pct=%thay đổi tuần
 txn_now_week=số giao dịch tuần gần nhất; aov_now=giá trị đơn TB;
 churn_risk=Cao/Trung bình/Thấp; weeks_declining_streak/weeks_increasing_streak=số tuần
 giảm/tăng liên tiếp; payment_mix_pct=tỷ trọng doanh số theo kênh (Payment Gateway/VietQR/Wallet);
-wallet_paylater_pct=tỷ trọng Paylater trong Wallet.
+wallet_paylater_pct=tỷ trọng Paylater trong Wallet;
+tpv_by_type=doanh số TUYỆT ĐỐI theo từng kênh (toàn kỳ); tpv_by_sof=doanh số TUYỆT ĐỐI theo từng SOF (Paylater/Others, toàn kỳ).
+QUAN TRỌNG khi tính TỔNG theo kênh/SOF cho nhiều merchant: phải CỘNG các giá trị tuyệt đối tpv_by_type/tpv_by_sof rồi mới chia ra %; TUYỆT ĐỐI không cộng hay bình quân các con số % per-merchant.
 Trình bày: kết luận ngắn (số in đậm) → bảng/gạch đầu dòng → đề xuất.
 QUAN TRỌNG: mọi số THAY ĐỔI tăng/giảm ghi rõ dấu +/− (tăng → "+1.8%", giảm → "−45%") để tô màu.
 Số tuyệt đối để nguyên. Nếu bảng không đủ dữ kiện, nói rõ thay vì suy đoán."""
@@ -391,10 +404,28 @@ def _r_forecast(r, meta):
     return "\n".join(body)
 
 
+def _r_payment(r, meta):
+    head = (f"**Cơ cấu thanh toán**{_scope_txt(r)} — tổng TPV **{_v(r['total_tpv'])}** "
+            "(toàn kỳ dữ liệu):")
+    tbl = ["", "| Kênh | TPV | Giao dịch | % tổng |", "|---|---|---|---|"]
+    for t in r["types"]:
+        txn = f"{t['txn']:,}".replace(",", ".")
+        tbl.append(f"| {t['name']} | {t['tpv_fmt']} | {txn} | **{t['pct']}%** |")
+    out = [head] + tbl
+    if r["sof"]:
+        out += ["", f"**SOF trong Wallet** (tổng Wallet {_v(r['wallet_tpv'])}):",
+                "", "| SOF | TPV | Giao dịch | % Wallet | % tổng |", "|---|---|---|---|---|"]
+        for s in r["sof"]:
+            txn = f"{s['txn']:,}".replace(",", ".")
+            out.append(f"| {s['name']} | {s['tpv_fmt']} | {txn} | {s['pct_wallet']}% | {s['pct_total']}% |")
+    return "\n".join(out)
+
+
 _RENDERERS = {
     "overview": _r_overview, "decline": _r_decline, "growth": _r_growth,
     "uptrend": _r_uptrend, "voucher": _r_voucher, "churn": _r_churn,
     "at_risk": _r_at_risk, "decompose": _r_decompose, "forecast": _r_forecast,
+    "payment": _r_payment,
 }
 
 

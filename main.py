@@ -43,6 +43,7 @@ DISPATCH = {
     "overview": "overview", "decline": "decline", "growth": "growth",
     "uptrend": "uptrend", "voucher": "voucher", "churn": "churn",
     "at_risk": "at_risk", "decompose": "decompose", "forecast": "forecast",
+    "payment": "payment",
 }
 
 
@@ -63,16 +64,26 @@ class InvocationIn(BaseModel):
 
 # ---------------- helpers ----------------
 def _run_analysis(analyzer: MerchantAnalyzer, question: str) -> dict[str, Any]:
-    routed = llm.route_intent(question)
+    # Định tuyến bằng TỪ KHÓA (tức thì, không gọi LLM) — 8 nhóm preset trả lời ngay.
+    routed = llm.keyword_route(question)
     intent = routed.get("intent", "unknown")
     params = routed.get("params") or {}
+
+    # Guard: câu hỏi nêu đích danh 1 merchant nhưng bị route nhầm sang tổng quan
+    # (vd "Tiệm Bánh Mì 36 doanh số thế nào") -> trả lời theo merchant đó (freeform).
+    if intent in ("overview", "unknown"):
+        low_q = question.lower()
+        if any(n.lower() in low_q for n in analyzer.merchant_names()):
+            intent = "freeform"
+
     method = DISPATCH.get(intent)
     if method:
+        # Nhóm cấu trúc: mọi số tính bằng code -> render template NGAY (không gọi LLM).
         kwargs = _clean_params(params)
         if intent == "decompose":
             kwargs["question"] = question  # giúp dò tên merchant khi router không trích được
         result = getattr(analyzer, method)(**kwargs)
-        answer = llm.interpret(question, result, analyzer.meta())
+        answer = llm.render_fallback(result, analyzer.meta())
         return {"intent": intent, "params": params, "result": result, "answer": answer}
 
     # freeform / unknown / câu lạ -> để LLM tự trả lời dựa trên TOÀN BỘ số liệu đã tính
