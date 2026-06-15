@@ -43,7 +43,7 @@ DISPATCH = {
     "overview": "overview", "decline": "decline", "growth": "growth",
     "uptrend": "uptrend", "voucher": "voucher", "churn": "churn",
     "at_risk": "at_risk", "decompose": "decompose", "forecast": "forecast",
-    "payment": "payment",
+    "payment": "payment", "merchant": "merchant",
 }
 
 
@@ -69,25 +69,25 @@ def _run_analysis(analyzer: MerchantAnalyzer, question: str) -> dict[str, Any]:
     intent = routed.get("intent", "unknown")
     params = routed.get("params") or {}
 
-    # Guard: câu hỏi nêu đích danh 1 merchant nhưng bị route nhầm sang tổng quan
-    # (vd "Tiệm Bánh Mì 36 doanh số thế nào") -> trả lời theo merchant đó (freeform).
-    if intent in ("overview", "unknown"):
-        low_q = question.lower()
-        if any(n.lower() in low_q for n in analyzer.merchant_names()):
-            intent = "freeform"
+    # Hỏi đích danh ĐÚNG 1 merchant (vd "Tiệm Bánh Mì 36 tổng doanh thu") mà không phải
+    # câu "vì sao" -> tra cứu merchant đó bằng CODE (tức thì, không cần LLM).
+    low_q = question.lower()
+    named = [n for n in analyzer.merchant_names() if n.lower() in low_q]
+    if len(named) == 1 and intent in ("overview", "unknown", "freeform"):
+        intent = "merchant"
 
     method = DISPATCH.get(intent)
     if method:
         # Nhóm cấu trúc: mọi số tính bằng code -> render template NGAY (không gọi LLM).
         kwargs = _clean_params(params)
-        if intent == "decompose":
+        if intent in ("decompose", "merchant"):
             kwargs["question"] = question  # giúp dò tên merchant khi router không trích được
         result = getattr(analyzer, method)(**kwargs)
         answer = llm.render_fallback(result, analyzer.meta())
         return {"intent": intent, "params": params, "result": result, "answer": answer}
 
     # freeform / unknown / câu lạ -> để LLM tự trả lời dựa trên TOÀN BỘ số liệu đã tính
-    ans = llm.interpret_freeform(question, analyzer.digest(), analyzer.meta())
+    ans = llm.interpret_freeform(question, _freeform_digest(analyzer, question), analyzer.meta())
     if ans:
         return {"intent": "freeform", "params": params,
                 "result": {"intent": "freeform"}, "answer": ans}
@@ -112,6 +112,24 @@ def _clean_params(params: dict) -> dict:
         except (ValueError, TypeError):
             pass
     return out
+
+
+def _freeform_digest(analyzer: MerchantAnalyzer, question: str) -> list[dict]:
+    """Payload GỌN cho freeform (nhanh hơn): thu hẹp theo merchant được nêu trong câu hỏi,
+    và bỏ chi tiết kênh thanh toán nếu câu hỏi không liên quan."""
+    q = question.lower()
+    rows = analyzer.digest()
+    named = [n for n in analyzer.merchant_names() if n.lower() in q]
+    if named:
+        rows = [r for r in rows if r["name"] in named]
+    pay_q = any(k in q for k in ("kênh", "thanh toán", "wallet", "ví", "paylater", "sof", "vietqr", "gateway"))
+    for r in rows:
+        r.pop("tpv_by_type", None)
+        r.pop("tpv_by_sof", None)
+        if not pay_q:
+            r.pop("payment_mix_pct", None)
+            r.pop("wallet_paylater_pct", None)
+    return rows
 
 
 # ---------------- routes ----------------

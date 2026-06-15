@@ -18,7 +18,8 @@ from typing import Any
 
 VALID_INTENTS = {
     "overview", "decline", "growth", "uptrend", "voucher",
-    "churn", "at_risk", "decompose", "forecast", "payment", "freeform", "unknown",
+    "churn", "at_risk", "decompose", "forecast", "payment", "merchant",
+    "freeform", "unknown",
 }
 
 _client = None
@@ -198,7 +199,8 @@ tpv_by_type=doanh số TUYỆT ĐỐI theo từng kênh (toàn kỳ); tpv_by_sof
 QUAN TRỌNG khi tính TỔNG theo kênh/SOF cho nhiều merchant: phải CỘNG các giá trị tuyệt đối tpv_by_type/tpv_by_sof rồi mới chia ra %; TUYỆT ĐỐI không cộng hay bình quân các con số % per-merchant.
 Trình bày: kết luận ngắn (số in đậm) → bảng/gạch đầu dòng → đề xuất.
 QUAN TRỌNG: mọi số THAY ĐỔI tăng/giảm ghi rõ dấu +/− (tăng → "+1.8%", giảm → "−45%") để tô màu.
-Số tuyệt đối để nguyên. Nếu bảng không đủ dữ kiện, nói rõ thay vì suy đoán."""
+Số tuyệt đối để nguyên. Nếu bảng không đủ dữ kiện, nói rõ thay vì suy đoán.
+TRẢ LỜI NGẮN GỌN (tối đa ~150 từ): kết luận + số liệu chính + 1 đề xuất; KHÔNG lan man, KHÔNG lặp lại đề bài."""
 
 
 def interpret_freeform(question: str, digest: list[dict], meta: dict[str, Any]) -> str | None:
@@ -215,7 +217,7 @@ def interpret_freeform(question: str, digest: list[dict], meta: dict[str, Any]) 
                     f"Câu hỏi: {question}\n\nBảng số liệu đã tính (JSON — số CHÍNH XÁC):\n{payload}\n\n"
                     "Trả lời câu hỏi chỉ dựa trên bảng trên, bằng tiếng Việt."},
             ],
-            temperature=0.2, max_tokens=1000, extra_body=_THINK_OFF,
+            temperature=0.2, max_tokens=600, extra_body=_THINK_OFF,
         )
         txt = (resp.choices[0].message.content or "").strip()
         return txt or None
@@ -421,11 +423,26 @@ def _r_payment(r, meta):
     return "\n".join(out)
 
 
+def _r_merchant(r, meta):
+    if not r.get("found"):
+        return "Không tìm thấy merchant đó. Nêu đúng tên giúp mình nhé."
+    mix = " · ".join(f"{k} {v}%" for k, v in r["payment_mix"].items())
+    return "\n".join([
+        f"**{r['name']}** ({r['category']}) — tình hình:",
+        "",
+        f"- 💰 Dự phóng cuối tháng: **{r['revenue_proj_fmt']}** ({r['mom_pct']:+}% vs tháng trước)",
+        f"- Đã đạt tháng này: {r['revenue_mtd_fmt']} · tháng trước: {r['revenue_prev_fmt']}",
+        f"- 📅 Tuần gần nhất: WoW **{r['wow_pct']:+}%** · {r['txn_week']} giao dịch/tuần · AOV {r['aov_fmt']}",
+        f"- ⚠️ Churn: {_badge(r['churn'])} (giảm liên tiếp {r['consec']} tuần / tăng {r['up_streak']} tuần)",
+        f"- 💳 Kênh thanh toán: {mix} — Paylater {r['wallet_paylater_pct']}% của Wallet",
+    ])
+
+
 _RENDERERS = {
     "overview": _r_overview, "decline": _r_decline, "growth": _r_growth,
     "uptrend": _r_uptrend, "voucher": _r_voucher, "churn": _r_churn,
     "at_risk": _r_at_risk, "decompose": _r_decompose, "forecast": _r_forecast,
-    "payment": _r_payment,
+    "payment": _r_payment, "merchant": _r_merchant,
 }
 
 

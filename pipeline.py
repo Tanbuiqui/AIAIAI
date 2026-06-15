@@ -315,6 +315,33 @@ class MerchantAnalyzer:
                 "wallet_tpv": round(wal_tot), "wallet_tpv_fmt": _fmt_vnd(wal_tot),
                 "types": types, "sof": sof}
 
+    # ---------- Tra cứu 1 merchant (tính bằng code, tức thì, không cần LLM) ----------
+    def merchant(self, merchant_name=None, question=None, **_) -> dict[str, Any]:
+        target = None
+        if merchant_name:
+            key = str(merchant_name).lower().strip()
+            target = next((m for m in self._metrics.values()
+                           if key in str(m["name"]).lower()), None)
+        if target is None and question:
+            low = str(question).lower()
+            target = next((m for m in self._metrics.values()
+                           if str(m["name"]).lower() in low), None)
+        if target is None:
+            return {"intent": "merchant", "found": False}
+        m = target
+        pay = m["pay"]
+        return {
+            "intent": "merchant", "found": True,
+            "name": m["name"], "category": m["category"],
+            "revenue_proj_fmt": _fmt_vnd(m["rev_proj"]),
+            "revenue_mtd_fmt": _fmt_vnd(m["rev_mtd"]),
+            "revenue_prev_fmt": _fmt_vnd(m["rev_prev"]),
+            "mom_pct": round(m["mom"], 1), "wow_pct": round(m["wow"], 1),
+            "txn_week": round(m["w_txn_now"]), "aov_fmt": _fmt_vnd(m["w_aov_now"]),
+            "churn": m["churn"], "consec": m["consec"], "up_streak": m["up_streak"],
+            "payment_mix": pay["mix"], "wallet_paylater_pct": pay["paylater_pct"],
+        }
+
     def digest(self) -> list[dict[str, Any]]:
         rows = []
         for m in self._metrics.values():
