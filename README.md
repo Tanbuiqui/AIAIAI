@@ -7,6 +7,32 @@
 
 ---
 
+## Mô tả ngắn (nộp form — ≤300 từ)
+
+> Copy đoạn **tiếng Việt hoặc tiếng Anh** dưới đây dán vào ô "Bài mô tả ngắn" của form (BTC chấp nhận VN hoặc EN).
+
+### 🇻🇳 Tiếng Việt
+
+**Vấn đề.** Account Manager / Sales quản lý hàng chục merchant phải tự mở Excel, lọc và tính tay để biết merchant nào đang giảm, ai sắp rời bỏ, và tháng này có cán đích doanh số hay không. Việc này tốn hàng giờ mỗi tuần, dễ bỏ sót và thường phát hiện quá muộn để can thiệp.
+
+**Người dùng mục tiêu.** Account Manager / Sales phụ trách một danh mục merchant (ví dụ đội kinh doanh cổng thanh toán).
+
+**Cách agent giải quyết.** Người dùng upload file giao dịch theo ngày (CSV/Excel: ngành, merchant, ngày, TPV, số giao dịch, kênh thanh toán) rồi hỏi tự nhiên bằng tiếng Việt. Agent tính toàn bộ chỉ số **bằng code (pandas)** trên hai trục — theo **tuần** (WoW) và theo **tháng** (dự phóng cuối tháng bằng run-rate, so với tháng trước) — rồi dùng model **Qwen trên GreenNode AgentBase (MaaS)** để diễn giải thành **số liệu + nguyên nhân + đề xuất hành động**. Agent trả lời được: tổng quan danh mục, dự phóng "tháng này có cao hơn tháng trước không", merchant giảm/tăng, cảnh báo churn 3 mức, merchant quan trọng đang lung lay, bóc tách nguyên nhân (số lượng × giá trị đơn) và hỏi-đáp tự do (kể cả cơ cấu kênh thanh toán). Mọi con số do code tính, LLM chỉ diễn giải nên không bịa số. Agent đóng gói FastAPI, deploy public trên AgentBase với endpoint `/invocations`.
+
+**Giá trị.** Giảm thời gian phân tích từ hàng giờ xuống vài giây mỗi ngày; phát hiện sớm merchant churn/giảm để giữ chân kịp thời; và biết trước tháng có đạt chỉ tiêu hay không để hành động ngay trong nửa cuối tháng.
+
+### 🇬🇧 English
+
+**Problem.** Account Managers / Sales reps managing dozens of merchants must open Excel and filter and compute by hand to learn which merchants are declining, who is about to churn, and whether this month will hit its revenue target. This takes hours every week, is error-prone, and issues are usually spotted too late to act.
+
+**Target users.** Account Managers / Sales reps who own a merchant portfolio (e.g., a payment-gateway sales team).
+
+**How the agent solves it.** Users upload a daily transaction file (CSV/Excel: category, merchant, date, TPV, transaction count, payment channel) and ask questions in natural Vietnamese. The agent computes every metric **in code (pandas)** on two axes — **weekly** (WoW) and **monthly** (month-end projection via run-rate, compared to the previous month) — then uses the **Qwen model on GreenNode AgentBase (MaaS)** to turn results into **numbers + root causes + recommended actions**. It answers: portfolio overview, the month-end forecast ("will this month beat last month?"), decliners/growers, 3-level churn alerts, high-value at-risk merchants, revenue decomposition (volume × order value), and free-form Q&A (including payment-channel mix). All numbers are code-computed; the LLM only explains, so it never fabricates figures. The agent is packaged as FastAPI and deployed publicly on AgentBase with an `/invocations` endpoint.
+
+**Value.** Cuts analysis from hours to seconds each day, surfaces churning/declining merchants early enough to retain them, and tells AMs in advance whether the month will hit target so they can act in the second half of the month.
+
+---
+
 ## Mô tả / Description (song ngữ)
 
 **🇻🇳 Tiếng Việt**
