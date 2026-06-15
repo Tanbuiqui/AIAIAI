@@ -376,6 +376,38 @@ function lineSVG(wk, ms){
   return `<svg class="zoomable" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:320px" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
 }
 
+// lăn chuột để phóng to/thu nhỏ (theo con trỏ) + kéo để di chuyển + double-click reset
+function enableWheelZoom(svg){
+  const v=svg.getAttribute('viewBox').split(/\s+/).map(Number);
+  const base={x:v[0],y:v[1],w:v[2],h:v[3]};
+  let cur={...base};
+  const apply=()=>svg.setAttribute('viewBox',`${cur.x} ${cur.y} ${cur.w} ${cur.h}`);
+  const clamp=()=>{cur.x=Math.min(base.x+base.w-cur.w,Math.max(base.x,cur.x));
+                   cur.y=Math.min(base.y+base.h-cur.h,Math.max(base.y,cur.y));};
+  const toUser=(cx,cy)=>{const r=svg.getBoundingClientRect();
+    return {x:cur.x+(cx-r.left)/r.width*cur.w, y:cur.y+(cy-r.top)/r.height*cur.h};};
+  svg.style.cursor='grab';
+  svg.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const f=e.deltaY<0?0.85:1/0.85;            // lăn lên = phóng to
+    const minW=base.w/12, maxW=base.w;
+    const nw=Math.min(maxW,Math.max(minW,cur.w*f)), nh=nw*(base.h/base.w);
+    const m=toUser(e.clientX,e.clientY);        // giữ điểm dưới con trỏ cố định
+    cur.x=m.x-(m.x-cur.x)*(nw/cur.w); cur.y=m.y-(m.y-cur.y)*(nh/cur.h);
+    cur.w=nw; cur.h=nh; clamp(); apply();
+  },{passive:false});
+  let drag=null;
+  const end=()=>{drag=null; svg.style.cursor='grab';};
+  svg.addEventListener('mousedown',e=>{drag={mx:e.clientX,my:e.clientY,x:cur.x,y:cur.y};svg.style.cursor='grabbing';});
+  svg.addEventListener('mousemove',e=>{if(!drag)return;
+    const r=svg.getBoundingClientRect();
+    cur.x=drag.x-(e.clientX-drag.mx)/r.width*cur.w;
+    cur.y=drag.y-(e.clientY-drag.my)/r.height*cur.h; clamp(); apply();});
+  svg.addEventListener('mouseup',end);
+  svg.addEventListener('mouseleave',end);
+  svg.addEventListener('dblclick',e=>{e.preventDefault(); cur={...base}; apply();});
+}
+
 // dựng bộ lọc (tìm theo tên + toggle ngành) và vẽ lại chart khi đổi lựa chọn
 function buildLineChart(mount, series){
   if(!mount)return;
@@ -395,7 +427,7 @@ function buildLineChart(mount, series){
     <div class="lccats"></div>
     <div class="lclist"></div>
     <div class="lcchart"></div>
-    <div class="lchint">💡 Chọn ≤8 merchant để hiện số tiền theo tuần · rê chuột vào đường để xem chi tiết</div>`;
+    <div class="lchint">💡 Chọn ≤8 merchant để hiện số tiền theo tuần · rê chuột vào đường để xem chi tiết · <b>lăn chuột để phóng to/thu nhỏ</b>, kéo để di chuyển, double-click để reset</div>`;
   const $=s=>mount.querySelector(s);
   const listEl=$('.lclist'), chartEl=$('.lcchart'), countEl=$('.lccount'), catsEl=$('.lccats');
   const cats=[...new Set(ms.map(m=>m.category))];
@@ -427,6 +459,8 @@ function buildLineChart(mount, series){
   }
   function drawChart(){
     chartEl.innerHTML=lineSVG(wk, ms.filter(m=>sel.has(m.id)));
+    const svg=chartEl.querySelector('svg');
+    if(svg)enableWheelZoom(svg);
   }
   function refresh(redrawList=true){
     countEl.textContent=`${sel.size}/${ms.length} merchant`;
