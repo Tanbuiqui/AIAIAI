@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import os
+import re
 import uuid
 from typing import Any
 
@@ -43,8 +44,15 @@ DISPATCH = {
     "overview": "overview", "decline": "decline", "growth": "growth",
     "uptrend": "uptrend", "voucher": "voucher", "churn": "churn",
     "at_risk": "at_risk", "decompose": "decompose", "forecast": "forecast",
-    "payment": "payment", "merchant": "merchant",
+    "payment": "payment", "merchant": "merchant", "month": "month",
 }
+
+# từ khóa kênh/SOF -> hỏi TỔNG theo kênh thì tính bằng code (payment), tránh LLM bịa số
+_PAY_WORDS = ("paylater", "wallet", "ví điện tử", "vietqr", "payment gateway",
+              "cổng thanh toán", "kênh thanh toán", "phương thức thanh toán",
+              "cơ cấu thanh toán", "sof")
+# ...trừ khi hỏi theo từng merchant (giữ freeform để xếp hạng per-merchant)
+_PER_MERCHANT = ("merchant nào", "merchant nao", "ai dùng", "ai dung", "nhiều nhất", "nhiều nhứt")
 
 
 # ---------------- models ----------------
@@ -75,13 +83,19 @@ def _run_analysis(analyzer: MerchantAnalyzer, question: str) -> dict[str, Any]:
     named = [n for n in analyzer.merchant_names() if n.lower() in low_q]
     if len(named) == 1 and intent in ("overview", "unknown", "freeform"):
         intent = "merchant"
+    elif re.search(r"th[aá]ng\s*\d", low_q) and intent in ("overview", "unknown", "freeform"):
+        intent = "month"   # hỏi 1 tháng cụ thể -> xếp hạng theo tháng bằng code
+    elif (intent in ("overview", "unknown", "freeform")
+          and any(w in low_q for w in _PAY_WORDS)
+          and not any(w in low_q for w in _PER_MERCHANT)):
+        intent = "payment"  # hỏi tổng theo kênh/SOF -> tính bằng code (không để LLM bịa)
 
     method = DISPATCH.get(intent)
     if method:
         # Nhóm cấu trúc: mọi số tính bằng code -> render template NGAY (không gọi LLM).
         kwargs = _clean_params(params)
-        if intent in ("decompose", "merchant"):
-            kwargs["question"] = question  # giúp dò tên merchant khi router không trích được
+        if intent in ("decompose", "merchant", "month"):
+            kwargs["question"] = question  # giúp dò tên merchant / tháng từ câu hỏi
         result = getattr(analyzer, method)(**kwargs)
         answer = llm.render_fallback(result, analyzer.meta())
         return {"intent": intent, "params": params, "result": result, "answer": answer}

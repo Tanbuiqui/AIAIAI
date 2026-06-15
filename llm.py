@@ -19,7 +19,7 @@ from typing import Any
 VALID_INTENTS = {
     "overview", "decline", "growth", "uptrend", "voucher",
     "churn", "at_risk", "decompose", "forecast", "payment", "merchant",
-    "freeform", "unknown",
+    "month", "freeform", "unknown",
 }
 
 _client = None
@@ -193,6 +193,7 @@ Bạn nhận BẢNG SỐ LIỆU đã được hệ thống tính sẵn cho từn
 CHỈ dựa trên bảng này. TUYỆT ĐỐI không bịa/đổi số; được phép lọc, so sánh, xếp hạng, cộng/đếm.
 Giải thích cột: revenue_prev_month=doanh số tháng trước (đủ); revenue_mtd=doanh số tháng này
 ĐÃ ĐẠT (đến hiện tại); revenue_proj_month_end=DỰ PHÓNG cuối tháng (run-rate);
+monthly_revenue={"YYYY-MM": doanh số TPV} cho MỌI tháng có trong dữ liệu (vd "2026-02") — DÙNG cái này khi hỏi về 1 tháng cụ thể (tháng gần nhất có thể là số chưa đủ tháng);
 mom_pct=%dự phóng tháng này vs tháng trước; wow_pct=%thay đổi tuần gần nhất;
 txn_now_week=số giao dịch tuần gần nhất; aov_now=giá trị đơn TB;
 churn_risk=Cao/Trung bình/Thấp; weeks_declining_streak/weeks_increasing_streak=số tuần
@@ -443,14 +444,26 @@ def _r_merchant(r, meta):
         f"- 📅 Tuần gần nhất: WoW **{r['wow_pct']:+}%** · {r['txn_week']} giao dịch/tuần · AOV {r['aov_fmt']}",
         f"- ⚠️ Churn: {_badge(r['churn'])} (giảm liên tiếp {r['consec']} tuần / tăng {r['up_streak']} tuần)",
         f"- 💳 Kênh thanh toán: {mix} — Paylater {r['wallet_paylater_pct']}% của Wallet",
+        "- 📆 Doanh số theo tháng: " + " · ".join(f"{k}: {v}" for k, v in r.get("monthly", {}).items()),
     ])
+
+
+def _r_month(r, meta):
+    if not r.get("found"):
+        return (f"Không có dữ liệu cho tháng **{r['month']}**. "
+                f"Các tháng có sẵn: {', '.join(r['available_months'])}.")
+    head = f"**Top {len(r['items'])} merchant theo TPV — tháng {r['month']}** (tổng {_v(r['total_tpv'])}, {r['n']} merchant):"
+    tbl = ["", "| # | Merchant | Ngành | TPV |", "|---|---|---|---|"]
+    for i, m in enumerate(r["items"], 1):
+        tbl.append(f"| {i} | {m['name']} | {m['category']} | {m['tpv_fmt']} |")
+    return head + "\n" + "\n".join(tbl)
 
 
 _RENDERERS = {
     "overview": _r_overview, "decline": _r_decline, "growth": _r_growth,
     "uptrend": _r_uptrend, "voucher": _r_voucher, "churn": _r_churn,
     "at_risk": _r_at_risk, "decompose": _r_decompose, "forecast": _r_forecast,
-    "payment": _r_payment, "merchant": _r_merchant,
+    "payment": _r_payment, "merchant": _r_merchant, "month": _r_month,
 }
 
 

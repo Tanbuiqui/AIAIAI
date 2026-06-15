@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import calendar
 import io
+import re
 from typing import Any
 
 import pandas as pd
@@ -179,6 +180,10 @@ class MerchantAnalyzer:
         aov_proj = rev_mtd / txn_mtd if txn_mtd else 0.0
         aov_mom = (aov_proj - aov_prev_m) / aov_prev_m * 100 if aov_prev_m else 0.0
 
+        # doanh số theo TỪNG tháng (cho câu hỏi về 1 tháng lịch sử bất kỳ)
+        mser = g.groupby(g["date"].dt.to_period("M"))["tpv"].sum()
+        monthly = {str(k): float(v) for k, v in mser.items()}
+
         rev, txn = self._weekly(g)
         n = len(rev)
         aov = [rev[i] / txn[i] if txn[i] else 0.0 for i in range(n)]
@@ -218,6 +223,7 @@ class MerchantAnalyzer:
             aov_prev_m=aov_prev_m, aov_proj=aov_proj, aov_mom=aov_mom,
             may_daily=may_daily, jun_daily=jun_daily,
             txn_may_daily=txn_may_daily, txn_jun_daily=txn_jun_daily,
+            monthly=monthly,
             # tuần
             w_rev=rev, w_txn=txn,
             w_rev_now=rev[-1] if rev else 0.0, w_rev_prev=rev[-2] if n > 1 else (rev[-1] if rev else 0.0),
@@ -315,6 +321,31 @@ class MerchantAnalyzer:
                 "wallet_tpv": round(wal_tot), "wallet_tpv_fmt": _fmt_vnd(wal_tot),
                 "types": types, "sof": sof}
 
+    # ---------- Xếp hạng theo 1 THÁNG cụ thể (tính bằng code) ----------
+    def month(self, question=None, top_n=10, **_) -> dict[str, Any]:
+        target = None
+        if question:
+            mm = re.search(r"th[aá]ng\s*(\d{1,2})", str(question).lower())
+            if mm:
+                mo = int(mm.group(1))
+                ym = re.search(r"(20\d{2})", str(question))
+                yr = int(ym.group(1)) if ym else self.cur_y
+                target = f"{yr}-{mo:02d}"
+        if target is None:
+            target = f"{self.cur_y}-{self.cur_m:02d}"
+        avail = sorted({k for m in self._metrics.values() for k in m["monthly"]})
+        rows = [(m["name"], m["category"], m["monthly"].get(target, 0.0))
+                for m in self._metrics.values()]
+        rows = [r for r in rows if r[2] > 0]
+        rows.sort(key=lambda r: -r[2])
+        items = [{"name": n, "category": c, "tpv": round(v), "tpv_fmt": _fmt_vnd(v)}
+                 for n, c, v in rows[:top_n]]
+        return {"intent": "month", "month": target, "found": bool(items),
+                "available_months": avail, "n": len(rows),
+                "total_tpv": round(sum(r[2] for r in rows)),
+                "total_tpv_fmt": _fmt_vnd(sum(r[2] for r in rows)),
+                "items": items}
+
     # ---------- Tra cứu 1 merchant (tính bằng code, tức thì, không cần LLM) ----------
     def merchant(self, merchant_name=None, question=None, **_) -> dict[str, Any]:
         target = None
@@ -340,6 +371,7 @@ class MerchantAnalyzer:
             "txn_week": round(m["w_txn_now"]), "aov_fmt": _fmt_vnd(m["w_aov_now"]),
             "churn": m["churn"], "consec": m["consec"], "up_streak": m["up_streak"],
             "payment_mix": pay["mix"], "wallet_paylater_pct": pay["paylater_pct"],
+            "monthly": {k: _fmt_vnd(v) for k, v in m["monthly"].items()},
         }
 
     def digest(self) -> list[dict[str, Any]]:
@@ -350,6 +382,7 @@ class MerchantAnalyzer:
                 "revenue_prev_month": round(m["rev_prev"]),
                 "revenue_mtd": round(m["rev_mtd"]),
                 "revenue_proj_month_end": round(m["rev_proj"]),
+                "monthly_revenue": {k: round(v) for k, v in m["monthly"].items()},
                 "mom_pct": round(m["mom"], 1),
                 "wow_pct": round(m["wow"], 1),
                 "txn_now_week": round(m["w_txn_now"]),
