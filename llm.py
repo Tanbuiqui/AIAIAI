@@ -24,6 +24,9 @@ VALID_INTENTS = {
 
 _client = None
 _MODEL = os.getenv("LLM_MODEL", "")
+# Model NHANH cho freeform (không "thinking"): Qwen3 trên MaaS không tắt được reasoning
+# (~20s/câu), nên freeform dùng Gemma 4 (~2-5s, không sinh reasoning token).
+_FREEFORM_MODEL = (os.getenv("FREEFORM_MODEL") or "google/gemma-4-31b-it")
 
 # Qwen3 "thinking" -> tắt để content không rỗng.
 _THINK_OFF = {"chat_template_kwargs": {"enable_thinking": False}}
@@ -200,29 +203,34 @@ QUAN TRỌNG khi tính TỔNG theo kênh/SOF cho nhiều merchant: phải CỘNG
 Trình bày: kết luận ngắn (số in đậm) → bảng/gạch đầu dòng → đề xuất.
 QUAN TRỌNG: mọi số THAY ĐỔI tăng/giảm ghi rõ dấu +/− (tăng → "+1.8%", giảm → "−45%") để tô màu.
 Số tuyệt đối để nguyên. Nếu bảng không đủ dữ kiện, nói rõ thay vì suy đoán.
-TRẢ LỜI NGẮN GỌN (tối đa ~150 từ): kết luận + số liệu chính + 1 đề xuất; KHÔNG lan man, KHÔNG lặp lại đề bài."""
+TRẢ LỜI CỰC NGẮN (tối đa ~70 từ, 2–4 câu): 1 câu kết luận + số liệu chính + 1 đề xuất; KHÔNG lan man, KHÔNG lặp lại đề bài, KHÔNG kẻ bảng dài."""
 
 
 def interpret_freeform(question: str, digest: list[dict], meta: dict[str, Any]) -> str | None:
     client = _get_client()
     if not client:
         return None
-    try:
-        payload = json.dumps({"meta": meta, "merchants": digest}, ensure_ascii=False)
-        resp = client.chat.completions.create(
-            model=_MODEL,
-            messages=[
-                {"role": "system", "content": _FREEFORM_SYSTEM},
-                {"role": "user", "content":
-                    f"Câu hỏi: {question}\n\nBảng số liệu đã tính (JSON — số CHÍNH XÁC):\n{payload}\n\n"
-                    "Trả lời câu hỏi chỉ dựa trên bảng trên, bằng tiếng Việt."},
-            ],
-            temperature=0.2, max_tokens=600, extra_body=_THINK_OFF,
-        )
-        txt = (resp.choices[0].message.content or "").strip()
-        return txt or None
-    except Exception:
-        return None
+    payload = json.dumps({"meta": meta, "merchants": digest}, ensure_ascii=False)
+    msgs = [
+        {"role": "system", "content": _FREEFORM_SYSTEM},
+        {"role": "user", "content":
+            f"Câu hỏi: {question}\n\nBảng số liệu đã tính (JSON — số CHÍNH XÁC):\n{payload}\n\n"
+            "Trả lời câu hỏi chỉ dựa trên bảng trên, bằng tiếng Việt."},
+    ]
+    # Gemma (nhanh, không thinking) trước; lỗi -> fallback Qwen (chậm nhưng chắc).
+    candidates = [m for m in (_FREEFORM_MODEL, _MODEL) if m]
+    for i, model in enumerate(dict.fromkeys(candidates)):
+        try:
+            kwargs = dict(model=model, messages=msgs, temperature=0.2, max_tokens=320)
+            if model == _MODEL:
+                kwargs["extra_body"] = _THINK_OFF
+            resp = client.chat.completions.create(**kwargs)
+            txt = (resp.choices[0].message.content or "").strip()
+            if txt:
+                return txt
+        except Exception as e:  # log để chẩn đoán (hiện trong runtime logs)
+            print(f"[freeform] model={model} lỗi: {e!r}", flush=True)
+    return None
 
 
 def interpret(question: str, result: dict[str, Any], meta: dict[str, Any]) -> str:
