@@ -129,20 +129,13 @@ def _clean_params(params: dict) -> dict:
 
 
 def _freeform_digest(analyzer: MerchantAnalyzer, question: str) -> list[dict]:
-    """Payload GỌN cho freeform (nhanh hơn): thu hẹp theo merchant được nêu trong câu hỏi,
-    và bỏ chi tiết kênh thanh toán nếu câu hỏi không liên quan."""
-    q = question.lower()
+    """Gửi FULL digest mỗi merchant cho freeform (mọi trường, mọi tháng) để LLM luôn đủ
+    dữ liệu phân tích. Nếu câu hỏi nêu đích danh merchant -> thu hẹp về merchant đó cho nhanh."""
     rows = analyzer.digest()
+    q = question.lower()
     named = [n for n in analyzer.merchant_names() if n.lower() in q]
     if named:
         rows = [r for r in rows if r["name"] in named]
-    pay_q = any(k in q for k in ("kênh", "thanh toán", "wallet", "ví", "paylater", "sof", "vietqr", "gateway"))
-    for r in rows:
-        r.pop("tpv_by_type", None)
-        r.pop("tpv_by_sof", None)
-        if not pay_q:
-            r.pop("payment_mix_pct", None)
-            r.pop("wallet_paylater_pct", None)
     return rows
 
 
