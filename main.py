@@ -42,7 +42,7 @@ SESSIONS: dict[str, MerchantAnalyzer] = {}
 DISPATCH = {
     "overview": "overview", "decline": "decline", "growth": "growth",
     "uptrend": "uptrend", "voucher": "voucher", "churn": "churn",
-    "at_risk": "at_risk", "decompose": "decompose",
+    "at_risk": "at_risk", "decompose": "decompose", "forecast": "forecast",
 }
 
 
@@ -89,10 +89,12 @@ def _run_analysis(analyzer: MerchantAnalyzer, question: str) -> dict[str, Any]:
 
 def _clean_params(params: dict) -> dict:
     out = {}
-    for k in ("region", "category", "merchant_name"):
+    for k in ("category", "merchant_name"):
         v = params.get(k)
         if v not in (None, "", "null"):
             out[k] = v
+    period = params.get("period")
+    out["period"] = "week" if str(period).lower() == "week" else "month"
     if params.get("top_n"):
         try:
             out["top_n"] = int(params["top_n"])

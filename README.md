@@ -10,10 +10,10 @@
 ## Mô tả / Description (song ngữ)
 
 **🇻🇳 Tiếng Việt**
-> **Merchant Growth Agent** — Trợ lý phân tích merchant cho Account Manager. Upload file giao dịch (CSV/Excel) rồi hỏi tự nhiên bằng tiếng Việt; agent tính toán bằng code (pandas) và dùng Qwen (MaaS) để diễn giải thành **số liệu + nguyên nhân + đề xuất hành động**. Tính năng: tổng quan danh mục, phát hiện merchant giảm, xếp hạng tăng trưởng, merchant tăng đều, cảnh báo churn 3 mức, ưu tiên "merchant đáng cứu" (churn × lợi nhuận), bóc tách nguyên nhân, biểu đồ xu hướng 8 tuần và hỏi-đáp tự do. Mọi con số tính bằng code — LLM chỉ diễn giải, không bịa số. Giúp AM giảm thời gian phân tích từ hàng giờ xuống vài giây và phát hiện sớm để giữ chân merchant.
+> **Merchant Growth Agent** — Trợ lý phân tích merchant cho Account Manager. Upload file giao dịch (CSV/Excel, dữ liệu **theo ngày**) rồi hỏi tự nhiên bằng tiếng Việt; agent tính toán bằng code (pandas) và dùng Qwen (MaaS) để diễn giải thành **số liệu + nguyên nhân + đề xuất hành động**. Phân tích trên **2 trục**: theo **tuần** (WoW) và theo **tháng** — tháng chưa hết được **dự phóng cuối tháng** (run-rate) và so với tháng trước. Tính năng: tổng quan danh mục, **dự phóng cuối tháng vs tháng trước**, phát hiện merchant giảm, xếp hạng tăng trưởng, merchant tăng đều, cảnh báo churn 3 mức, ưu tiên "merchant đáng cứu" (churn × doanh số), bóc tách nguyên nhân (số lượng × giá trị đơn), biểu đồ xu hướng và hỏi-đáp tự do (kể cả cơ cấu kênh thanh toán). Mọi con số tính bằng code — LLM chỉ diễn giải, không bịa số. Giúp AM giảm thời gian phân tích từ hàng giờ xuống vài giây và biết sớm tháng này có cán đích hay không.
 
 **🇬🇧 English**
-> **Merchant Growth Agent** — an analytics assistant for Account Managers. Upload a merchant transaction file (CSV/Excel) and ask questions in natural Vietnamese; the agent computes every metric in code (pandas) and uses Qwen (MaaS) to turn results into **numbers + root causes + recommended actions**. Features: portfolio overview, decline detection, growth ranking, steady-growth detection, 3-level churn alerts, "who's worth saving" prioritization (churn × profit), revenue decomposition, an 8-week trend chart, and free-form Q&A. All numbers are code-computed — the LLM only explains, never fabricates. It cuts analysis time from hours to seconds and surfaces at-risk merchants early so AMs can retain them.
+> **Merchant Growth Agent** — an analytics assistant for Account Managers. Upload a **daily** merchant transaction file (CSV/Excel) and ask questions in natural Vietnamese; the agent computes every metric in code (pandas) and uses Qwen (MaaS) to turn results into **numbers + root causes + recommended actions**. It analyzes on **two axes**: by **week** (WoW) and by **month** — the in-progress month is **projected to month-end** (run-rate) and compared against the previous month. Features: portfolio overview, **month-end forecast vs last month**, decline detection, growth ranking, steady-growth detection, 3-level churn alerts, "who's worth saving" prioritization (churn × revenue), revenue decomposition (volume × order value), a trend chart, and free-form Q&A (incl. payment-method mix). All numbers are code-computed — the LLM only explains, never fabricates. It cuts analysis time from hours to seconds and tells AMs early whether the month will hit target.
 
 ---
 
@@ -31,16 +31,22 @@ Giảm thời gian phân tích từ hàng giờ xuống vài giây; phát hiện
 
 ---
 
-## Tính năng chính (7 nhóm phân tích)
-- **Tổng quan danh mục** — tổng doanh thu/lợi nhuận + % WoW, số merchant tăng/giảm/churn, top mover.
-- **Phát hiện merchant giảm** — WoW âm + bóc nguyên nhân (giao dịch / khách quay lại / giá trị đơn).
-- **Xếp hạng tăng trưởng** — Top N theo % tăng WoW.
-- **Gợi ý voucher** — ưu tiên theo lợi nhuận gộp; cảnh báo merchant biên mỏng (vd điện tử ~19%) không nên giảm giá sâu.
-- **Cảnh báo churn 3 mức** (Cao 🔴 / Trung bình 🟡 / Thấp 🟢) theo quy tắc định lượng.
-- **Merchant quan trọng đang lung lay** — giao của churn × lợi nhuận cao, xếp theo *giá trị có nguy cơ mất*.
-- **Bóc tách nguyên nhân tăng/giảm** — tách WoW thành số lượng / giá trị đơn / giữ chân → map ra hành động.
+## Tính năng chính
+- **Tổng quan danh mục** — tổng doanh số (TPV) + % thay đổi (tháng dự phóng / WoW), số merchant tăng/giảm/churn, top mover.
+- **Dự phóng cuối tháng vs tháng trước** — tháng chưa hết → ước lượng run-rate cả tháng, trả lời "cao hơn tháng trước không", liệt kê merchant dự phóng tăng/giảm.
+- **Phát hiện merchant giảm** — thay đổi âm + bóc nguyên nhân (số lượng giao dịch / giá trị đơn).
+- **Xếp hạng tăng trưởng** — Top N theo % tăng (tháng hoặc tuần).
+- **Merchant tăng đều** — tăng liên tiếp nhiều tuần.
+- **Gợi ý voucher** — merchant đang giảm, ưu tiên theo **doanh số (TPV)**.
+- **Cảnh báo churn 3 mức** (Cao 🔴 / Trung bình 🟡 / Thấp 🟢) — theo xu hướng doanh số/giao dịch (giảm ≥3 tuần liên tiếp hoặc sụp <70% TB 4 tuần).
+- **Merchant quan trọng đang lung lay** — churn × doanh số dự phóng, xếp theo *giá trị có nguy cơ mất*.
+- **Bóc tách nguyên nhân tăng/giảm** — tách thành số lượng × giá trị đơn → map ra hành động.
+- **Hỏi-đáp tự do** — gồm cơ cấu kênh thanh toán (Payment Gateway / VietQR / Wallet, tỷ trọng Paylater).
 
 > Mọi con số được tính **bằng code**; mô hình LLM chỉ diễn giải kết quả đã tính.
+
+### Dữ liệu đầu vào (schema)
+9 cột: `Sub-cate` (ngành), `Merchant id`, `Merchant name`, `App id`, `Date` (theo ngày), `TPV` (doanh số), `Transaction` (số giao dịch), `Transaction type` (Payment Gateway / VietQR / Wallet), `SOF` (Paylater / Others — chỉ khi Wallet). Cần tháng trước **đủ** + tháng hiện tại (có thể chưa hết) để dự phóng.
 
 ## Kiến trúc
 
@@ -52,11 +58,12 @@ Giảm thời gian phân tích từ hàng giờ xuống vài giây; phát hiện
 | **Deploy** | GreenNode AgentBase (Docker build & push tự động, public endpoint). |
 
 ### File chính
-- `pipeline.py` — lõi phân tích (7 nhóm, mọi con số tính bằng code)
+- `pipeline.py` — lõi phân tích (engine tuần + dự phóng tháng, mọi con số tính bằng code)
 - `llm.py` — tầng LLM 2 lượt + fallback rule-based
 - `main.py` — FastAPI: `/health`, `/`, `/api/upload`, `/api/analyze`, `/invocations`
-- `static/index.html` — web view chat (upload kéo-thả, chip gợi ý, badge churn)
-- `merchant_performance_sample.csv` — dữ liệu mẫu (40 merchant × 8 tuần)
+- `static/index.html` — web view chat (upload kéo-thả, chip gợi ý, badge churn, biểu đồ)
+- `merchant_performance_sample.csv` — dữ liệu mẫu (40 merchant, theo ngày, **5 tháng**: 02–05 đủ + tháng 6 đến 15/06)
+- `make_sample_data.py` / `verify_sample_data.py` — sinh & kiểm tra dữ liệu mẫu
 
 ---
 
@@ -112,7 +119,7 @@ docker run -p 8080:8080 --env-file .env merchant-growth-agent
 ## Demo
 - **Video:** `<link YouTube unlisted / OneDrive share internal — xem được bằng @vng.com.vn>`
 
-Kịch bản demo gợi ý: upload `merchant_performance_sample.csv` → "Merchant nào giảm tuần này?" → "Ai sắp churn?" → "Nên chạy voucher cho ai?" → "Ai quan trọng đang lung lay?" → "Top 5 tăng trưởng ở TP.HCM".
+Kịch bản demo gợi ý: upload `merchant_performance_sample.csv` → "Tổng quan tháng này" → "Dự phóng cuối tháng có cao hơn tháng trước không?" → "Merchant nào giảm?" → "Ai sắp churn?" → "Ai quan trọng đang lung lay?" → "Top 5 tăng trưởng".
 
 ---
 

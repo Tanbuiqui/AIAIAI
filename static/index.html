@@ -218,9 +218,9 @@
 
 <script>
 const SUGGESTIONS = [
-  "Tổng quan tuần này","Merchant nào giảm tuần này?","Top 10 tăng trưởng",
-  "Ai sắp churn?","Ai quan trọng đang lung lay?","Nên chạy voucher cho ai?",
-  "Ai tăng đều mỗi tuần?"
+  "Tổng quan tháng này","Dự phóng cuối tháng có cao hơn tháng trước?",
+  "Merchant nào giảm?","Top 10 tăng trưởng","Ai sắp churn?",
+  "Ai quan trọng đang lung lay?","Nên chạy voucher cho ai?","Ai tăng đều mỗi tuần?"
 ];
 let sessionId = null;
 const chat=document.getElementById('chat'), drop=document.getElementById('drop'),
@@ -294,12 +294,12 @@ function columnChart(items){
     const up=m.revenue>=m.revenue_prev, nowCol=up?'#2ecc71':'#ff5c5c';
     const ph=(m.revenue_prev/mx)*PH, nh=(m.revenue/mx)*PH;
     const px=pairL+bw/2, nx=pairL+bw+gap+bw/2, pyTop=T+PH-ph, nyTop=T+PH-nh;
-    // cột tuần trước
-    s+=`<rect x="${pairL}" y="${pyTop}" width="${bw}" height="${ph}" rx="3" fill="#46568a"><title>${esc(m.name)} — tuần trước: ${esc(m.revenue_prev_fmt)}</title></rect>`;
+    // cột kỳ trước
+    s+=`<rect x="${pairL}" y="${pyTop}" width="${bw}" height="${ph}" rx="3" fill="#46568a"><title>${esc(m.name)} — kỳ trước: ${esc(m.revenue_prev_fmt)}</title></rect>`;
     s+=`<text x="${px}" y="${pyTop-4}" text-anchor="middle" font-size="9" fill="#aab4d0">${fmtShort(m.revenue_prev)}</text>`;
-    // cột tuần này
-    s+=`<rect x="${pairL+bw+gap}" y="${nyTop}" width="${bw}" height="${nh}" rx="3" fill="${nowCol}"><title>${esc(m.name)} — tuần này: ${esc(m.revenue_fmt)} (${sgn(m.wow_pct)})</title></rect>`;
-    s+=`<text x="${nx}" y="${nyTop-15}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${nowCol}">${sgn(m.wow_pct)}</text>`;
+    // cột kỳ này
+    s+=`<rect x="${pairL+bw+gap}" y="${nyTop}" width="${bw}" height="${nh}" rx="3" fill="${nowCol}"><title>${esc(m.name)} — kỳ này: ${esc(m.revenue_fmt)} (${sgn(m.change_pct)})</title></rect>`;
+    s+=`<text x="${nx}" y="${nyTop-15}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${nowCol}">${sgn(m.change_pct)}</text>`;
     s+=`<text x="${nx}" y="${nyTop-4}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#e7ecf6">${fmtShort(m.revenue)}</text>`;
     const lab=m.name.length>12?m.name.slice(0,11)+'…':m.name;
     if(n>5)s+=`<text x="${cx}" y="${T+PH+13}" text-anchor="end" font-size="9.5" fill="#cdd6ea" transform="rotate(-32 ${cx} ${T+PH+13})">${esc(lab)}</text>`;
@@ -307,7 +307,7 @@ function columnChart(items){
   });
   // chú thích
   let lx=L;
-  const lg=[['#46568a','Tuần trước'],['#2ecc71','Tăng'],['#ff5c5c','Giảm']];
+  const lg=[['#46568a','Kỳ trước'],['#2ecc71','Tăng'],['#ff5c5c','Giảm']];
   lg.forEach(([c,t])=>{s+=`<rect x="${lx}" y="14" width="11" height="11" rx="2" fill="${c}"/>`
     +`<text x="${lx+15}" y="23" font-size="10" fill="#93a0c0">${t}</text>`;lx+=t.length*6.4+36;});
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:280px" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
@@ -328,9 +328,10 @@ function rankList(items,valFn,extraFn){
   }).join('')+`</div>`;
 }
 
-// màu theo ngành hàng
-const CAT_COLORS={'F&B':'#5b8cff','Thời trang':'#ff7ab6','Điện tử':'#f1c40f','Tạp hóa':'#2ecc71',
-  'Sách':'#22d3ee','Làm đẹp':'#c084fc','Khác':'#9aa6c4'};
+// màu theo ngành hàng (Sub-cate)
+const CAT_COLORS={'Bakery & Dessert':'#ff9f43','Coffee & Tea':'#a47148','Restaurant':'#5b8cff',
+  'Fashion':'#ff7ab6','Electronics':'#f1c40f','Grocery':'#2ecc71','Books & Stationery':'#22d3ee',
+  'Beauty & Cosmetics':'#c084fc','Others':'#9aa6c4'};
 const catColor=c=>CAT_COLORS[c]||'#9aa6c4';
 const ddmm=iso=>{const p=iso.split('-');return p[2]+'/'+p[1];};
 
@@ -440,18 +441,20 @@ function buildLineChart(mount, series){
   refresh();
 }
 
+const perTxt=r=>r.period==='week'?'tuần':'tháng — dự phóng';
 const VIZ={
   overview(r){
-    const wc=cls(r.revenue_wow_pct);
-    return `<div class="vtitle">Tổng quan danh mục — tuần <span class="hl">${r._week||''}</span></div>
+    const wc=cls(r.change_pct), isM=r.period!=='week';
+    const head=isM?`dự phóng tháng <span class="hl">${r._month||''}</span>`:`tuần gần nhất`;
+    return `<div class="vtitle">Tổng quan danh mục — ${head}</div>
       <div class="kpis">
-        <div class="tile"><div class="lab">Tổng doanh thu</div><div class="val">${esc(fmt(r.total_revenue))}</div></div>
-        <div class="tile"><div class="lab">Lợi nhuận gộp</div><div class="val">${esc(fmt(r.total_gross_profit))}</div></div>
-        <div class="tile"><div class="lab">WoW doanh thu</div><div class="val ${wc}">${sgn(r.revenue_wow_pct)}</div></div>
+        <div class="tile"><div class="lab">${isM?'Doanh số dự phóng':'Doanh số tuần'}</div><div class="val">${esc(fmt(r.total_now))}</div></div>
+        ${isM?`<div class="tile"><div class="lab">Đã đạt đến nay</div><div class="val">${esc(fmt(r.total_mtd))}</div></div>`:''}
+        <div class="tile"><div class="lab">${isM?'vs tháng trước':'WoW'}</div><div class="val ${wc}">${sgn(r.change_pct)}</div></div>
       </div>
       <div class="pills">
-        <div class="pill up" onclick="askQ('Top 40 tăng trưởng tuần này')"><b>${r.n_up}</b>tăng<span class="hintx">bấm xem ↗</span></div>
-        <div class="pill down" onclick="askQ('Top 40 merchant giảm tuần này')"><b>${r.n_down}</b>giảm<span class="hintx">bấm xem ↗</span></div>
+        <div class="pill up" onclick="askQ('Top 40 tăng trưởng')"><b>${r.n_up}</b>tăng<span class="hintx">bấm xem ↗</span></div>
+        <div class="pill down" onclick="askQ('Top 40 merchant giảm')"><b>${r.n_down}</b>giảm<span class="hintx">bấm xem ↗</span></div>
         <div class="pill warn" onclick="askQ('Ai sắp churn?')"><b>${r.n_churn_high}</b>churn Cao<span class="hintx">bấm xem ↗</span></div>
       </div>
       <div class="cols">
@@ -459,9 +462,24 @@ const VIZ={
         <div><div class="colh">📉 Giảm mạnh nhất</div>${columnChart(r.top_down)}</div>
       </div>`;
   },
+  forecast(r){
+    const wc=cls(r.change_pct);
+    const verdict=r.is_higher?'<span class="rval up">CAO HƠN ✅</span>':'<span class="rval down">THẤP HƠN ⚠️</span>';
+    return `<div class="vtitle">🔮 Dự phóng cuối tháng <span class="hl">${r._month||''}</span> vs tháng trước</div>
+      <div class="kpis">
+        <div class="tile"><div class="lab">Tháng trước</div><div class="val">${esc(fmt(r.total_prev_month))}</div></div>
+        <div class="tile"><div class="lab">Dự phóng cuối tháng</div><div class="val">${esc(fmt(r.total_proj_month_end))}</div></div>
+        <div class="tile"><div class="lab">Nhịp độ vs tháng trước</div><div class="val ${wc}">${sgn(r.change_pct)} ${verdict}</div></div>
+      </div>
+      <div class="rsub" style="margin:2px 2px 12px">Đã đạt <b>${esc(fmt(r.total_mtd))}</b> sau <b>${r.days_elapsed}/${r.days_in_month}</b> ngày · 🟢 ${r.n_higher} cao hơn · 🔴 ${r.n_lower} thấp hơn</div>
+      <div class="cols">
+        <div><div class="colh">📈 Dự phóng tăng</div>${columnChart(r.top_higher)}</div>
+        <div><div class="colh">📉 Dự phóng giảm</div>${columnChart(r.top_lower)}</div>
+      </div>`;
+  },
   growth(r){
     if(!r.items.length)return `<div class="vtitle">Chưa có merchant tăng trưởng dương.</div>`;
-    return `<div class="vtitle">🏆 Top <span class="hl">${r.items.length}</span> tăng trưởng tuần này (doanh thu tuần trước → tuần này)</div>`
+    return `<div class="vtitle">🏆 Top <span class="hl">${r.items.length}</span> tăng trưởng (${perTxt(r)}) — kỳ trước → kỳ này</div>`
       +columnChart(r.items);
   },
   uptrend(r){
@@ -478,27 +496,25 @@ const VIZ={
       }).join('')+`</div>`;
   },
   decline(r){
-    if(!r.items.length)return `<div class="vtitle">Không có merchant nào giảm tuần này 🎉</div>`;
-    return `<div class="vtitle"><span class="hl">${r.count}</span> merchant giảm doanh thu tuần này (tuần trước → tuần này)</div>`
+    if(!r.items.length)return `<div class="vtitle">Không có merchant nào giảm 🎉</div>`;
+    return `<div class="vtitle"><span class="hl">${r.count}</span> merchant giảm doanh số (${perTxt(r)}) — kỳ trước → kỳ này</div>`
       +columnChart(r.items)
       +`<div class="cardgrid" style="margin-top:8px">`+r.items.map(m=>
         `<div class="rrow"><div class="rnum">•</div><div>
-          <div class="rname"><span class="nm">${esc(m.name)}</span><span class="rval down">${sgn(m.wow_pct)}</span></div>
-          <div class="rsub">giao dịch ${sgn(m.txn_wow)} · khách quay lại ${sgn(m.rr_wow)} · ${lvBadge(m.churn)}</div>
+          <div class="rname"><span class="nm">${esc(m.name)}</span><span class="rval down">${sgn(m.change_pct)}</span></div>
+          <div class="rsub">giao dịch ${sgn(m.txn_chg)} · giá trị đơn ${sgn(m.aov_chg)} · ${lvBadge(m.churn)}</div>
         </div></div>`).join('')+`</div>`;
   },
   voucher(r){
     if(!r.items.length)return `<div class="vtitle">Chưa có merchant khớp tiêu chí voucher.</div>`;
-    return `<div class="vtitle">🎟️ <span class="hl">${r.items.length}</span> merchant nên giữ chân (ưu tiên theo lợi nhuận)</div>
+    return `<div class="vtitle">🎟️ <span class="hl">${r.items.length}</span> merchant nên giữ chân (ưu tiên theo doanh số)</div>
       <div class="cardgrid">`+r.items.map(m=>`
       <div class="card">
         <div class="chead"><span class="cname">${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
-          <span class="rval down">${sgn(m.wow_pct)}</span></div>
-        <div class="cstats"><span>Lợi nhuận <b>${esc(m.gross_profit_fmt)}</b></span>
-          <span>Khách quay lại <b>${sgn(m.rr_wow)}</b></span></div>
-        <div class="cstats" style="margin-bottom:0"><span style="flex:1">Biên LN <b>${m.margin_pct}%</b>${m.thin_margin?' ⚠️ mỏng':''}</span></div>
-        ${meter(m.margin_pct,m.thin_margin)}
-        <div class="rec ${m.thin_margin?'thin':''}">${esc(m.recommendation)}</div>
+          <span class="rval down">${sgn(m.change_pct)}</span></div>
+        <div class="cstats"><span>Doanh số <b>${esc(m.revenue_fmt)}</b></span>
+          <span>Churn ${lvBadge(m.churn)}</span></div>
+        <div class="rec">${esc(m.recommendation)}</div>
       </div>`).join('')+`</div>`;
   },
   churn(r){
@@ -509,8 +525,8 @@ const VIZ={
         <div class="chead"><span class="cname">${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
           ${lvBadge(m.churn)}</div>
         <div class="cstats"><span>WoW <b class="rval ${cls(m.wow_pct)}">${sgn(m.wow_pct)}</b></span>
-          <span>Khách quay lại <b>${m.rr_now}%</b></span>
-          <span>Giảm liên tiếp <b>${m.consec_decline} tuần</b></span></div>
+          <span>Giảm liên tiếp <b>${m.consec_decline} tuần</b></span>
+          ${m.crash?'<span>⚡ sụp mạnh tuần này</span>':''}</div>
         <div class="reason">${esc(m.reason)}</div>
       </div>`).join('')+`</div>`;
   },
@@ -522,7 +538,7 @@ const VIZ={
       <div class="card lv-${lvKey(m.churn)}">
         <div class="chead"><span class="cname">${i+1}. ${esc(m.name)}<span class="tag">${esc(m.category)}</span></span>
           ${lvBadge(m.churn)}</div>
-        <div class="cstats"><span>Lợi nhuận 4 tuần <b>${esc(m.gross_profit_last4_fmt)}</b></span>
+        <div class="cstats"><span>Doanh số dự phóng <b>${esc(m.revenue_proj_fmt)}</b></span>
           <span>Giá trị nguy cơ <b style="color:var(--down)">${esc(m.value_at_risk_fmt)}</b></span></div>
         <div class="meter"><div class="mf" style="width:${m.value_at_risk/maxV*100}%;background:linear-gradient(90deg,var(--down),#c0392b)"></div></div>
         <div class="reason">${esc(m.reason)}</div>
@@ -531,17 +547,16 @@ const VIZ={
   decompose(r){
     if(!r.found)return `<div class="vtitle">Không tìm thấy merchant phù hợp. Nêu rõ tên giúp mình nhé.</div>`;
     const drivers=[
-      ['Số lượng giao dịch',r.txn_wow,r.qty_effect_pct],
-      ['Giá trị đơn (AOV)',r.aov_wow,r.aov_effect_pct],
-      ['Tỷ lệ khách quay lại',r.rr_wow,null],
+      ['Số lượng giao dịch',r.txn_chg,r.qty_effect_pct],
+      ['Giá trị đơn (AOV)',r.aov_chg,r.aov_effect_pct],
     ];
     const maxAbs=Math.max(...drivers.map(d=>Math.abs(d[1])),0.01);
-    const rows=drivers.map(([nm,wow,eff])=>`
+    const rows=drivers.map(([nm,chg,eff])=>`
       <div class="drow"><div class="dlab"><span class="nm">${nm}</span>
-        <span class="vv ${cls(wow)}">${sgn(wow)}${eff!==null?` <span style="color:var(--muted);font-weight:400">(≈${sgn(eff)} DT)</span>`:''}</span></div>
-        ${wowBar(wow,maxAbs)}</div>`).join('');
+        <span class="vv ${cls(chg)}">${sgn(chg)}${eff!==null?` <span style="color:var(--muted);font-weight:400">(≈${sgn(eff)} DT)</span>`:''}</span></div>
+        ${wowBar(chg,maxAbs)}</div>`).join('');
     return `<div class="vtitle">Bóc tách nguyên nhân — <span class="hl">${esc(r.name)}</span></div>
-      <div class="decohead ${cls(r.wow_pct)}">${sgn(r.wow_pct)} <span style="font-size:14px;color:var(--muted);font-weight:500">doanh thu WoW</span></div>
+      <div class="decohead ${cls(r.change_pct)}">${sgn(r.change_pct)} <span style="font-size:14px;color:var(--muted);font-weight:500">doanh số ${r.period==='week'?'WoW':'tháng (dự phóng)'}</span></div>
       <div class="deco">${rows}</div>
       <div class="colh">Đề xuất hành động</div>
       <ul class="actions">${r.actions.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`;
@@ -578,8 +593,8 @@ function colorNums(s){
 
 function renderAnswer(j){
   const r=j.result||{};const intent=r.intent||j.intent;
-  if(VIZ[intent] && (r.items||r.top_up||r.found!==undefined||intent==='overview')){
-    if(intent==='overview')r._week=(currentMeta&&currentMeta.current_week)||'';
+  if(VIZ[intent] && (r.items||r.top_up||r.top_higher||r.found!==undefined||intent==='overview')){
+    r._month=(currentMeta&&currentMeta.current_month)||'';
     const viz=VIZ[intent](r);
     const prose=j.answer?`<details class="prose"><summary>💬 Diễn giải & đề xuất chi tiết</summary><div class="pbody">${md(j.answer)}</div></details>`:'';
     return viz+prose;
@@ -605,10 +620,10 @@ async function upload(file){
     const j=await r.json();
     if(!r.ok){load.innerHTML='<span class="err">⚠ '+esc(j.error||'Lỗi nạp file')+'</span>';return;}
     sessionId=j.session_id;currentMeta=j.meta;const m=j.meta;
-    statusEl.innerHTML=`<b>${m.n_merchants}</b> merchant · <b>${m.n_weeks}</b> tuần · tuần hiện tại <b>${m.current_week}</b>`;
-    let html=md(`Đã nạp **${m.n_merchants} merchant**, **${m.n_weeks} tuần** (${m.week_first||''}${m.week_first?' → ':''}**${m.current_week}**).`);
+    statusEl.innerHTML=`<b>${m.n_merchants}</b> merchant · <b>${m.n_weeks}</b> tuần · tháng <b>${m.current_month}</b> (đến ${m.data_to}, ${m.days_elapsed}/${m.days_in_month} ngày)`;
+    let html=md(`Đã nạp **${m.n_merchants} merchant**, dữ liệu **${m.data_from} → ${m.data_to}** (tháng **${m.prev_month}** đủ + tháng **${m.current_month}** đến ngày ${m.days_elapsed}/${m.days_in_month}).`);
     if(j.series){
-      html+=`<div class="vtitle" style="margin-top:12px">📈 Doanh thu merchant qua ${m.n_weeks} tuần <span style="font-weight:400;color:var(--muted);font-size:12px">— lọc theo tên/ngành; chọn ít merchant để hiện số tiền theo tuần</span></div><div class="lcmount"></div>`;
+      html+=`<div class="vtitle" style="margin-top:12px">📈 Doanh số merchant qua ${m.n_weeks} tuần <span style="font-weight:400;color:var(--muted);font-size:12px">— lọc theo tên/ngành; chọn ít merchant để hiện số tiền theo tuần</span></div><div class="lcmount"></div>`;
     }
     html+=md(`\nHỏi mình bất cứ điều gì, hoặc bấm gợi ý bên dưới 👇`);
     load.innerHTML=html;

@@ -2,7 +2,21 @@
 
 > Track: **Data Analysis** · Model runtime: **Qwen (MaaS)** · Deploy: **GreenNode AgentBase**
 > Mốc cứng: **Submit 17/06 12:00** · Fail-fix 18/06 12:00 · Voting 22/06–03/07
-> Cập nhật: 2026-06-13
+> Cập nhật: 2026-06-15
+
+---
+
+## 🔄 CẬP NHẬT SCHEMA MỚI (15/06) — đã làm, CẦN RE-DEPLOY
+
+- [x] Đổi schema nguồn sang atlas: `Sub-cate, Merchant id, Merchant name, App id, Date, TPV, Transaction, Transaction type, SOF` (theo ngày).
+- [x] Bỏ cột lợi nhuận / khách quay lại / khu vực → bỏ tính năng phụ thuộc; voucher & at-risk xếp theo **TPV**.
+- [x] Thêm trục **THÁNG**: dự phóng cuối tháng (run-rate, trung hòa số ngày) vs tháng trước; intent mới **forecast**.
+- [x] Engine **theo tuần** cho churn/uptrend/decompose (tuần đủ 7 ngày); thêm `period` (month/week).
+- [x] Sinh lại data mẫu (40 merchant, **5 tháng**: 02–05 đủ + tháng 6 đến 15/06) + verify **TẤT CẢ KHỚP** (churn Cao 5 / TB 11).
+- [x] Cập nhật `llm.py` (router + renderer + glossary), `main.py` (dispatch forecast, param period), UI (VIZ + chip + biểu đồ), README.
+- [x] Test local end-to-end (upload + 10 câu hỏi, fallback) PASS.
+- [ ] **⚠️ RE-DEPLOY lên AgentBase** (build lại image + push) — endpoint hiện tại vẫn chạy schema CŨ.
+- [ ] Test lại endpoint public với data schema MỚI sau khi re-deploy.
 
 ---
 
